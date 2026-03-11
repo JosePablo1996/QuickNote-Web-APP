@@ -1,0 +1,250 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Estilos base para modo claro (por defecto) */
+  :root {
+    --bg-primary: 249 250 251;  /* gray-50 */
+    --bg-secondary: 255 255 255; /* white */
+    --text-primary: 17 24 39;    /* gray-900 */
+    --text-secondary: 75 85 99;  /* gray-600 */
+    --border: 229 231 235;       /* gray-200 */
+    --accent: 59 130 246;        /* blue-500 */
+  }
+
+  /* Estilos base para modo oscuro */
+  .dark {
+    --bg-primary: 17 24 39;      /* gray-900 */
+    --bg-secondary: 31 41 55;     /* gray-800 */
+    --text-primary: 243 244 246;  /* gray-100 */
+    --text-secondary: 156 163 175; /* gray-400 */
+    --border: 55 65 81;           /* gray-700 */
+    --accent: 96 165 250;         /* blue-400 */
+  }
+
+  body {
+    @apply bg-gray-50 text-gray-900 transition-colors duration-300;
+    @apply dark:bg-gray-900 dark:text-gray-100;
+  }
+
+  /* Scrollbar personalizada */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-gray-100 dark:bg-gray-800;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-400 dark:bg-gray-600 rounded;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-500 dark:bg-gray-500;
+  }
+}
+
+@layer components {
+  /* 🎨 TRANSICIÓN DE TEMA - NUEVO */
+  .theme-transition,
+  .theme-transition *,
+  .theme-transition *:before,
+  .theme-transition *:after {
+    transition: all 0.3s ease-in-out !important;
+    transition-property: background-color, border-color, color, fill, stroke, box-shadow, opacity !important;
+    transition-duration: 300ms !important;
+  }
+
+  /* Clases utilitarias para temas */
+  .bg-primary {
+    @apply bg-white dark:bg-gray-800;
+  }
+  
+  .bg-secondary {
+    @apply bg-gray-50 dark:bg-gray-900;
+  }
+  
+  .text-primary {
+    @apply text-gray-900 dark:text-gray-100;
+  }
+  
+  .text-secondary {
+    @apply text-gray-600 dark:text-gray-400;
+  }
+  
+  .border-theme {
+    @apply border-gray-200 dark:border-gray-700;
+  }
+  
+  /* Tarjetas y contenedores */
+  .card {
+    @apply bg-white dark:bg-gray-800 rounded-lg shadow-sm 
+           border border-gray-200 dark:border-gray-700
+           hover:shadow-md transition-all duration-200;
+  }
+  
+  /* Inputs y formularios */
+  .input-theme {
+    @apply bg-white dark:bg-gray-800 
+           border border-gray-300 dark:border-gray-600
+           text-gray-900 dark:text-gray-100
+           focus:ring-2 focus:ring-blue-500 focus:border-transparent
+           rounded-lg px-4 py-2 outline-none transition-all;
+  }
+  
+  /* Botones */
+  .btn-primary {
+    @apply bg-blue-600 hover:bg-blue-700 
+           dark:bg-blue-500 dark:hover:bg-blue-600
+           text-white font-medium px-4 py-2 rounded-lg
+           transition-colors duration-200;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-200 hover:bg-gray-300 
+           dark:bg-gray-700 dark:hover:bg-gray-600
+           text-gray-900 dark:text-gray-100 font-medium 
+           px-4 py-2 rounded-lg transition-colors duration-200;
+  }
+
+  /* Animaciones adicionales */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+
+  @keyframes slideUp {
+    from {
+      transform: translateY(10px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+
+  @keyframes slideDown {
+    from {
+      transform: translateY(-10px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .animate-slide-down {
+    animation: slideDown 0.3s ease-out;
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  .animate-pulse-slow {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  /* Efectos de glassmorphism */
+  .glass {
+    @apply bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border border-white/20 dark:border-gray-700/30;
+  }
+
+  .glass-strong {
+    @apply bg-white/90 dark:bg-gray-900/90 backdrop-blur-lg border border-white/30 dark:border-gray-700/50;
+  }
+
+  .glass-light {
+    @apply bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm border border-white/10 dark:border-gray-700/20;
+  }
+
+  /* Gradientes predefinidos */
+  .gradient-primary {
+    @apply bg-gradient-to-r from-blue-500 to-purple-600;
+  }
+
+  .gradient-success {
+    @apply bg-gradient-to-r from-green-500 to-emerald-600;
+  }
+
+  .gradient-warning {
+    @apply bg-gradient-to-r from-yellow-500 to-orange-600;
+  }
+
+  .gradient-error {
+    @apply bg-gradient-to-r from-red-500 to-rose-600;
+  }
+
+  .gradient-info {
+    @apply bg-gradient-to-r from-cyan-500 to-blue-600;
+  }
+
+  /* Efectos de hover mejorados */
+  .hover-lift {
+    @apply transition-transform duration-200 hover:-translate-y-1;
+  }
+
+  .hover-glow {
+    @apply transition-shadow duration-200 hover:shadow-lg hover:shadow-blue-500/20;
+  }
+
+  .hover-scale {
+    @apply transition-transform duration-200 hover:scale-105;
+  }
+
+  /* Líneas decorativas */
+  .decorative-line {
+    @apply w-1 h-8 bg-gradient-to-b from-blue-500 to-purple-600 rounded-full;
+  }
+
+  .decorative-line-horizontal {
+    @apply h-1 w-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full;
+  }
+
+  /* Badges */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .badge-blue {
+    @apply badge bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400;
+  }
+
+  .badge-green {
+    @apply badge bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400;
+  }
+
+  .badge-red {
+    @apply badge bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400;
+  }
+
+  .badge-yellow {
+    @apply badge bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400;
+  }
+
+  .badge-purple {
+    @apply badge bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400;
+  }
+}

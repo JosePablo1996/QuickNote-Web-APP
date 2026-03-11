@@ -1,0 +1,8 @@
+{
+  "watch": ["server.ts", "src/api/passkey/"],
+  "ext": "ts,json",
+  "ignore": ["src/**/*.test.ts", "node_modules"],
+  "execMap": {
+    "ts": "tsx"
+  }
+}

@@ -1,0 +1,173 @@
+# ============================================
+# 📦 Dependencies
+# ============================================
+node_modules/
+.pnp
+.pnp.js
+.pnp.cjs
+.yarn/
+.lerna/
+
+# ============================================
+# 🧪 Testing
+# ============================================
+coverage
+.coverage
+.nyc_output
+*.test.ts
+*.spec.ts
+*.test.tsx
+*.spec.tsx
+
+# ============================================
+# 🚀 Production Builds
+# ============================================
+dist
+dist-ssr
+build
+out
+*.tgz
+*.tar.gz
+
+# ============================================
+# 🔐 Environment Variables (¡IMPORTANTE!)
+# ============================================
+# Archivos de entorno (NUNCA subir estos)
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.staging
+.env.server
+.env.example   # ✅ El ejemplo sí se puede subir
+
+# ============================================
+# 📝 Logs
+# ============================================
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ============================================
+# 🔧 Editor Directories and Files
+# ============================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-*
+*.code-workspace
+.history/
+
+# ============================================
+# 💻 OS Generated Files
+# ============================================
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# ============================================
+# ⚡ Vite / Build Tools
+# ============================================
+*.log
+*.pid
+*.seed
+*.pid.lock
+.vite/
+.temp/
+.cache/
+
+# ============================================
+# 📘 TypeScript
+# ============================================
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+# Los archivos compilados JS (si usas compilación)
+*.js
+*.js.map
+!server.js    # ✅ Excluir server.js si lo generas manualmente
+!vite.config.js
+!tailwind.config.js
+!postcss.config.js
+!eslint.config.js
+
+# ============================================
+# 📦 Package Managers
+# ============================================
+# npm
+package-lock.json   # ✅ QUITADO: subir package-lock.json es buena práctica
+
+# yarn
+yarn.lock          # ✅ QUITADO: subir yarn.lock es buena práctica
+
+# pnpm
+pnpm-lock.yaml     # ✅ QUITADO: subir pnpm-lock.yaml es buena práctica
+
+# ============================================
+# 🗄️ Database
+# ============================================
+*.db
+*.sqlite
+*.sqlite3
+
+# ============================================
+# 🖼️ Uploads / Temp Files
+# ============================================
+uploads/
+temp/
+tmp/
+*.tmp
+
+# ============================================
+# 📁 Project Specific
+# ============================================
+# Archivos específicos de tu proyecto que no deben subirse
+*.pem
+*.key
+*.crt
+secrets/
+
+# ============================================
+# 🔒 Security
+# ============================================
+# Archivos de claves y certificados
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+secrets/
+
+# ============================================
+# 🧠 Memory / Cache
+# ============================================
+.cache/
+.memfs/
+.rollup.cache/
+.eslintcache
+.stylelintcache
+
+# ============================================
+# 📦 Backup Files
+# ============================================
+*.bak
+*.backup
+*.old
+*.orig
+
+# ============================================
+# 📊 Reports
+# ============================================
+reports/
+*.html
+test-results/
+junit.xml
