@@ -156,8 +156,8 @@
       <td><img src="public/images/screenshots/changelog-page.png" alt="Changelog" width="400"/></td>
     </tr>
     <tr>
-      <td align="center"><em>👤 Perfil del desarrollador estilo Facebook</em></td>
-      <td align="center"><em>📊 Historial de cambios con scroll personalizado</em></td>
+      <td align="center"><em>👤 Perfil del desarrollador</em></td>
+      <td align="center"><em>📊 Historial de cambios</em></td>
     </tr>
   </table>
   
