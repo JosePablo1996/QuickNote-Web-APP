@@ -8,7 +8,7 @@ import {
   Eye, EyeOff, Lock, Mail, LogIn, Shield, 
   Fingerprint, ChevronDown, ChevronUp,
   CheckCircle, ArrowRight, Smartphone, ShieldCheck,
-  Key, Hash
+  Key, Hash, WifiOff
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PasskeyLoginButton } from '../contexts/components/auth/PasskeyLoginButton';
@@ -58,6 +58,14 @@ const LoginPage: React.FC = () => {
   const [loginStep, setLoginStep] = useState<'credentials' | '2fa'>('credentials');
   const [tempToken, setTempToken] = useState('');
   const [twoFactorEmail, setTwoFactorEmail] = useState('');
+
+  // ✅ Detectar si estamos en producción (Render) o desarrollo
+  const isProduction = window.location.hostname !== 'localhost' && 
+                      !window.location.hostname.includes('127.0.0.1') &&
+                      !window.location.hostname.includes('192.168');
+  
+  // ✅ Mostrar u ocultar Passkey según el entorno
+  const showPasskeyOption = !isProduction;
 
   // ✅ Restaurar flujo 2FA si hay datos en sessionStorage
   useEffect(() => {
@@ -265,7 +273,7 @@ const LoginPage: React.FC = () => {
     setError(errorMsg);
   };
 
-  // ✅ Callback para login con passkey
+  // ✅ Callback para login con passkey (solo desarrollo)
   const handlePasskeyLoginSuccess = () => {
     console.log('✅ Login con passkey exitoso');
     
@@ -317,6 +325,8 @@ const LoginPage: React.FC = () => {
   // PANTALLA DE CREDENCIALES
   // ============================================
   console.log('📧 Renderizando formulario de login - Paso credentials');
+  console.log('🌍 Entorno de producción:', isProduction);
+  console.log('🔐 Mostrar opción Passkey:', showPasskeyOption);
   
   return (
     <div className={`min-h-screen bg-gradient-to-br from-blue-600 via-purple-600 to-pink-500 ${isDarkMode ? 'dark' : ''}`}>
@@ -424,13 +434,23 @@ const LoginPage: React.FC = () => {
                       2FA disponible
                     </span>
                     <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-full text-xs text-blue-100 border border-white/20">
-                      <Fingerprint className="w-3.5 h-3.5 text-purple-400" />
-                      Passkey
-                    </span>
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-full text-xs text-blue-100 border border-white/20">
                       <Smartphone className="w-3.5 h-3.5 text-green-400" />
                       OTP
                     </span>
+                    {/* ✅ Badge de Passkey solo en desarrollo */}
+                    {showPasskeyOption && (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-full text-xs text-blue-100 border border-white/20">
+                        <Fingerprint className="w-3.5 h-3.5 text-purple-400" />
+                        Passkey
+                      </span>
+                    )}
+                    {/* ✅ Badge de producción */}
+                    {isProduction && (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/30 rounded-full text-xs text-emerald-100 border border-emerald-400/50">
+                        <CheckCircle className="w-3.5 h-3.5 text-emerald-300" />
+                        Producción
+                      </span>
+                    )}
                   </motion.div>
                 </div>
 
@@ -642,24 +662,34 @@ const LoginPage: React.FC = () => {
                               <p className="text-blue-200 text-sm mt-1">
                                 Elige tu método preferido para acceder
                               </p>
-                            </div>
-
-                            <div className="bg-white/5 rounded-2xl p-5 border border-white/10">
-                              <div className="text-center mb-4">
-                                <div className="inline-flex p-4 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl shadow-lg mb-3">
-                                  <Fingerprint className="w-8 h-8 text-white" />
+                              {isProduction && (
+                                <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/30 rounded-full text-xs text-amber-100 border border-amber-400/50">
+                                  <WifiOff className="w-3.5 h-3.5" />
+                                  <span>En producción, Passkey está deshabilitado</span>
                                 </div>
-                                <h4 className="text-white font-semibold text-sm">Acceso Biométrico</h4>
-                                <p className="text-blue-200 text-xs mt-1">
-                                  Usa Windows Hello, Touch ID o Face ID
-                                </p>
-                              </div>
-                              <PasskeyLoginButton
-                                onSuccess={handlePasskeyLoginSuccess}
-                                onError={(errorMsg: string) => setError(errorMsg)}
-                              />
+                              )}
                             </div>
 
+                            {/* ✅ Sección de Passkey - solo visible en desarrollo */}
+                            {showPasskeyOption && (
+                              <div className="bg-white/5 rounded-2xl p-5 border border-white/10">
+                                <div className="text-center mb-4">
+                                  <div className="inline-flex p-4 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl shadow-lg mb-3">
+                                    <Fingerprint className="w-8 h-8 text-white" />
+                                  </div>
+                                  <h4 className="text-white font-semibold text-sm">Acceso Biométrico</h4>
+                                  <p className="text-blue-200 text-xs mt-1">
+                                    Usa Windows Hello, Touch ID o Face ID
+                                  </p>
+                                </div>
+                                <PasskeyLoginButton
+                                  onSuccess={handlePasskeyLoginSuccess}
+                                  onError={(errorMsg: string) => setError(errorMsg)}
+                                />
+                              </div>
+                            )}
+
+                            {/* ✅ Sección de OTP - siempre visible */}
                             <motion.button
                               type="button"
                               whileHover={{ scale: 1.02 }}
