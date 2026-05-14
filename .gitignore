@@ -150,7 +150,6 @@ secrets/
 # 📊 Reports
 # ============================================
 reports/
-*.html
 test-results/
 junit.xml
 
@@ -159,3 +158,8 @@ junit.xml
 # ============================================
 nodemon.json
 Variables_De_Entorno_Fronted_QuickNote.txt
+
+# ============================================
+# ✅ ARCHIVO INDEX.HTML - NO IGNORAR
+# ============================================
+# !index.html
