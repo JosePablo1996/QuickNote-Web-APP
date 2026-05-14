@@ -2,8 +2,11 @@
 import { Note, NoteCreate, NoteUpdate } from '../models/Note';
 import { compressData, decompressData } from '../utils/compression';
 
-// Usar variable de entorno para la URL de la API
-const API_URL = import.meta.env.VITE_API_URL || 'https://quicknote-api-app-react.onrender.com';
+// ============================================
+// ✅ URL DE LA API - CONFIGURADA PARA PRODUCCIÓN
+// ============================================
+// Hardcodeada temporalmente para pruebas en Render
+const API_URL = 'https://quicknote-api-app-react.onrender.com';
 
 // Detectar si estamos en desarrollo
 const isDevelopment = (): boolean => {
@@ -117,17 +120,15 @@ class ApiService {
   private baseUrl: string;
 
   constructor() {
-    if (isDevelopment()) {
-      this.baseUrl = '/api/v1';
-    } else {
-      this.baseUrl = API_URL.replace(/\/$/, '');
-    }
+    // ✅ AHORA USA LA URL HARCODEADA
+    this.baseUrl = API_URL;
     
     console.log('%c🔧================================', 'color: #00ff00; font-weight: bold');
     console.log('%c🌐 API Service inicializado', 'color: #00ff00; font-weight: bold');
     console.log('%c🔧================================', 'color: #00ff00; font-weight: bold');
     console.log('📌 URL Base:', this.baseUrl);
-    console.log('🔧 Modo:', isDevelopment() ? '✅ DESARROLLO (proxy Vite)' : '🚀 PRODUCCIÓN');
+    console.log('🔧 Modo:', isDevelopment() ? '✅ DESARROLLO' : '🚀 PRODUCCIÓN');
+    console.log('🔧 API URL:', API_URL);
     console.log('%c🔧================================\n', 'color: #00ff00; font-weight: bold');
   }
 
@@ -169,7 +170,6 @@ class ApiService {
 
   /**
    * Guardar backup en la nube con compresión automática
-   * ✅ NUEVO: Compresión GZIP/LZString antes de enviar
    */
   async saveCloudBackup(notes: any[]): Promise<CloudBackup | null> {
     console.log('☁️ [API] POST /backup/cloud - Guardando backup en la nube');
@@ -182,7 +182,6 @@ class ApiService {
         throw new Error('No autenticado');
       }
 
-      // ✅ COMPRESIÓN: Comprimir datos antes de enviar
       console.log('🗜️ [API] Comprimiendo datos...');
       const compressionResult = await compressData({ notes });
       
@@ -191,7 +190,6 @@ class ApiService {
       
       console.log(`🗜️ [API] Compresión completada: ${originalSizeKB} KB → ${compressedSizeKB} KB (${compressionResult.ratio} reducción, método: ${compressionResult.method})`);
       
-      // Crear objeto con datos comprimidos
       const backupData = {
         file_name: `backup_${new Date().toISOString().replace(/[:.]/g, '-')}.json`,
         file_size: compressionResult.compressedSize,
@@ -203,7 +201,7 @@ class ApiService {
         }
       };
 
-      const url = `${this.baseUrl}/backup/cloud`;
+      const url = `${this.baseUrl}/api/v1/backup/cloud`;
       const headers = this.getAuthHeaders();
       
       const response = await fetch(url, {
@@ -247,7 +245,7 @@ class ApiService {
         return [];
       }
 
-      const url = `${this.baseUrl}/backup/cloud`;
+      const url = `${this.baseUrl}/api/v1/backup/cloud`;
       const headers = this.getAuthHeaders();
       
       const response = await fetch(url, {
@@ -276,7 +274,6 @@ class ApiService {
 
   /**
    * Restaurar backup específico de la nube con descompresión automática
-   * ✅ NUEVO: Descompresión automática de datos comprimidos
    */
   async restoreCloudBackup(backupId: string): Promise<any[] | null> {
     console.log(`☁️ [API] GET /backup/cloud/${backupId} - Restaurando backup`);
@@ -288,7 +285,7 @@ class ApiService {
         throw new Error('No autenticado');
       }
 
-      const url = `${this.baseUrl}/backup/cloud/${backupId}`;
+      const url = `${this.baseUrl}/api/v1/backup/cloud/${backupId}`;
       const headers = this.getAuthHeaders();
       
       const response = await fetch(url, {
@@ -306,7 +303,6 @@ class ApiService {
       
       let notes: any[] = [];
       
-      // ✅ DESCOMPRESIÓN: Verificar si los datos están comprimidos
       if (data.notes_data && data.notes_data.__compressed__ === true) {
         console.log(`🗜️ [API] Datos comprimidos detectados (método: ${data.notes_data.method})`);
         console.log(`🗜️ [API] Descomprimiendo datos...`);
@@ -323,7 +319,6 @@ class ApiService {
           throw new Error('Error al descomprimir los datos del backup');
         }
       } 
-      // Compatibilidad con backups antiguos (sin compresión)
       else if (data.notes_data && Array.isArray(data.notes_data)) {
         console.log('📦 [API] Backup sin compresión detectado (formato antiguo)');
         notes = data.notes_data;
@@ -358,7 +353,7 @@ class ApiService {
         return false;
       }
 
-      const url = `${this.baseUrl}/backup/cloud/${backupId}`;
+      const url = `${this.baseUrl}/api/v1/backup/cloud/${backupId}`;
       const headers = this.getAuthHeaders();
       
       const response = await fetch(url, {
@@ -391,7 +386,7 @@ class ApiService {
       const token = this.getAuthToken();
       if (!token) return null;
 
-      const url = `${this.baseUrl}/backup/cloud/limit/info`;
+      const url = `${this.baseUrl}/api/v1/backup/cloud/limit/info`;
       const headers = this.getAuthHeaders();
       
       const response = await fetch(url, {
@@ -416,7 +411,7 @@ class ApiService {
     console.log('🔐 [API] POST /auth/2fa/enable');
     
     try {
-      const url = `${this.baseUrl}/auth/2fa/enable`;
+      const url = `${this.baseUrl}/api/v1/auth/2fa/enable`;
       const headers = this.getAuthHeaders();
       const response = await fetch(url, {
         method: 'POST',
@@ -441,7 +436,7 @@ class ApiService {
     console.log('🔐 [API] POST /auth/2fa/verify-enable');
     
     try {
-      const url = `${this.baseUrl}/auth/2fa/verify-enable`;
+      const url = `${this.baseUrl}/api/v1/auth/2fa/verify-enable`;
       const headers = this.getAuthHeaders();
       const response = await fetch(url, {
         method: 'POST',
@@ -467,7 +462,7 @@ class ApiService {
     console.log('🔐 [API] POST /auth/2fa/verify-login');
     
     try {
-      const url = `${this.baseUrl}/auth/2fa/verify-login`;
+      const url = `${this.baseUrl}/api/v1/auth/2fa/verify-login`;
       
       const response = await fetch(url, {
         method: 'POST',
@@ -504,7 +499,7 @@ class ApiService {
     console.log('🔐 [API] POST /auth/2fa/verify-backup');
     
     try {
-      const url = `${this.baseUrl}/auth/2fa/verify-backup`;
+      const url = `${this.baseUrl}/api/v1/auth/2fa/verify-backup`;
       
       const response = await fetch(url, {
         method: 'POST',
@@ -541,7 +536,7 @@ class ApiService {
     console.log('🔐 [API] POST /auth/2fa/disable');
     
     try {
-      const url = `${this.baseUrl}/auth/2fa/disable`;
+      const url = `${this.baseUrl}/api/v1/auth/2fa/disable`;
       const headers = this.getAuthHeaders();
       const response = await fetch(url, {
         method: 'POST',
@@ -566,7 +561,7 @@ class ApiService {
     console.log('🔐 [API] GET /auth/2fa/status');
     
     try {
-      const url = `${this.baseUrl}/auth/2fa/status`;
+      const url = `${this.baseUrl}/api/v1/auth/2fa/status`;
       const headers = this.getAuthHeaders();
       const response = await fetch(url, {
         method: 'GET',
@@ -599,7 +594,7 @@ class ApiService {
         return [];
       }
 
-      const url = `${this.baseUrl}/passkeys/list/${userId}`;
+      const url = `${this.baseUrl}/api/v1/passkeys/list/${userId}`;
       const headers = this.getAuthHeaders();
       
       const response = await fetch(url, {
@@ -625,7 +620,7 @@ class ApiService {
     console.log('🔐 [API] POST /passkeys/register/start');
     
     try {
-      const url = `${this.baseUrl}/passkeys/register/start`;
+      const url = `${this.baseUrl}/api/v1/passkeys/register/start`;
       const response = await fetch(url, {
         method: 'POST',
         headers: this.getAuthHeaders(),
@@ -654,7 +649,7 @@ class ApiService {
     console.log('🔐 [API] POST /passkeys/register/complete');
     
     try {
-      const url = `${this.baseUrl}/passkeys/register/complete`;
+      const url = `${this.baseUrl}/api/v1/passkeys/register/complete`;
       const response = await fetch(url, {
         method: 'POST',
         headers: this.getAuthHeaders(),
@@ -682,7 +677,7 @@ class ApiService {
     console.log('🗑️ [API] DELETE /passkeys');
     
     try {
-      const url = `${this.baseUrl}/passkeys/${credentialId}?user_id=${userId}`;
+      const url = `${this.baseUrl}/api/v1/passkeys/${credentialId}?user_id=${userId}`;
       const headers = this.getAuthHeaders();
       
       const response = await fetch(url, {
@@ -709,7 +704,7 @@ class ApiService {
     console.log('🔐 [API] POST /passkeys/login/start');
     
     try {
-      const url = `${this.baseUrl}/passkeys/login/start`;
+      const url = `${this.baseUrl}/api/v1/passkeys/login/start`;
       const response = await fetch(url, {
         method: 'POST',
         headers: this.getAuthHeaders(),
@@ -734,7 +729,7 @@ class ApiService {
     console.log('🔐 [API] POST /passkeys/login/complete');
     
     try {
-      const url = `${this.baseUrl}/passkeys/login/complete`;
+      const url = `${this.baseUrl}/api/v1/passkeys/login/complete`;
       const response = await fetch(url, {
         method: 'POST',
         headers: this.getAuthHeaders(),
@@ -771,7 +766,7 @@ class ApiService {
         return [];
       }
 
-      const url = `${this.baseUrl}/notes/?deleted=${deleted}`;
+      const url = `${this.baseUrl}/api/v1/notes/?deleted=${deleted}`;
       const headers = this.getAuthHeaders();
       
       const response = await fetch(url, {
@@ -801,7 +796,7 @@ class ApiService {
         return null;
       }
 
-      const url = `${this.baseUrl}/notes/${id}`;
+      const url = `${this.baseUrl}/api/v1/notes/${id}`;
       const headers = this.getAuthHeaders();
       
       const response = await fetch(url, {
@@ -843,7 +838,7 @@ class ApiService {
         return null;
       }
       
-      const url = `${this.baseUrl}/notes/`;
+      const url = `${this.baseUrl}/api/v1/notes/`;
       const headers = this.getAuthHeaders();
       
       const response = await fetch(url, {
@@ -888,7 +883,7 @@ class ApiService {
       }
       if (note.deleted_at !== undefined) noteToSend.deleted_at = note.deleted_at;
 
-      const url = `${this.baseUrl}/notes/${id}`;
+      const url = `${this.baseUrl}/api/v1/notes/${id}`;
       const headers = this.getAuthHeaders();
       
       const response = await fetch(url, {
@@ -914,7 +909,7 @@ class ApiService {
     console.log(`🗑️ [API] DELETE /notes/${id}`);
     
     try {
-      const url = `${this.baseUrl}/notes/${id}`;
+      const url = `${this.baseUrl}/api/v1/notes/${id}`;
       const headers = this.getAuthHeaders();
       
       const response = await fetch(url, {
