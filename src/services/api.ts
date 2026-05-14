@@ -3,7 +3,7 @@ import { Note, NoteCreate, NoteUpdate } from '../models/Note';
 import { compressData, decompressData } from '../utils/compression';
 
 // Usar variable de entorno para la URL de la API
-const API_URL = import.meta.env.VITE_API_URL || 'https://quicknote-api-app-react.onrender.com/api/v1';
+const API_URL = import.meta.env.VITE_API_URL || 'https://quicknote-api-app-react.onrender.com';
 
 // Detectar si estamos en desarrollo
 const isDevelopment = (): boolean => {
