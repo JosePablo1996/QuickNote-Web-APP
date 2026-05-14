@@ -696,7 +696,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // ============================================
-  // CHANGE PASSWORD (con sesión activa) (CORREGIDO)
+  // CHANGE PASSWORD (con sesión activa)
   // ============================================
   const changePassword = async (currentPassword: string, newPassword: string): Promise<{
     success: boolean;
@@ -784,7 +784,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // ============================================
-  // LOGOUT
+  // LOGOUT (CORREGIDO CON REDIRECCIÓN EXPLÍCITA)
   // ============================================
   const logout = async (): Promise<void> => {
     setIsLoading(true);
@@ -799,8 +799,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(null);
       setSession(null);
       
-      console.log('Sesion cerrada');
+      console.log('Sesion cerrada correctamente');
       toast.info('Sesion cerrada correctamente');
+      
+      // ✅ Forzar redirección explícita a login con recarga completa
+      window.location.href = '/login';
       
     } catch (err) {
       console.error('Error al cerrar sesion:', err);
