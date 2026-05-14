@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 
 // Obtener el directorio actual (para ESM)
 const __filename = fileURLToPath(import.meta.url);
@@ -16,11 +17,27 @@ export default defineConfig(({ command, mode }) => {
     ? process.env.VITE_API_URL || 'https://quicknote-api-app-react.onrender.com'
     : 'http://localhost:8000';
 
+  // Logs para diagnóstico en Render
   console.log(`🔧 Modo: ${mode || command}`);
+  console.log(`🔧 Directorio actual: ${__dirname}`);
   console.log(`🔧 API Target: ${apiTarget}`);
+  
+  // Verificar si index.html existe (para diagnóstico)
+  const indexPath = path.resolve(__dirname, 'index.html');
+  const indexExists = fs.existsSync(indexPath);
+  console.log(`🔧 index.html existe: ${indexExists} en ${indexPath}`);
+  
+  // Verificar si src/main.tsx existe
+  const mainPath = path.resolve(__dirname, 'src', 'main.tsx');
+  const mainExists = fs.existsSync(mainPath);
+  console.log(`🔧 src/main.tsx existe: ${mainExists} en ${mainPath}`);
 
   return {
     plugins: [react()],
+    // ✅ Forzar la raíz al directorio actual
+    root: __dirname,
+    // ✅ Especificar el archivo de entrada principal
+    publicDir: path.resolve(__dirname, 'public'),
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
@@ -51,16 +68,21 @@ export default defineConfig(({ command, mode }) => {
       },
     },
     build: {
-      outDir: 'dist',
-      sourcemap: !isProduction, // Solo sourcemaps en desarrollo
+      outDir: path.resolve(__dirname, 'dist'),
+      emptyOutDir: true,
+      sourcemap: !isProduction,
       minify: 'terser',
       terserOptions: {
         compress: {
-          drop_console: isProduction, // Eliminar console.log en producción
+          drop_console: isProduction,
           drop_debugger: isProduction,
         },
       },
       rollupOptions: {
+        // ✅ Especificar el punto de entrada explícitamente
+        input: {
+          main: path.resolve(__dirname, 'index.html'),
+        },
         output: {
           manualChunks: {
             'vendor-react': ['react', 'react-dom', 'react-router-dom'],
@@ -68,20 +90,16 @@ export default defineConfig(({ command, mode }) => {
             'vendor-webauthn': ['@simplewebauthn/browser'],
             'vendor-utils': ['date-fns', 'uuid'],
           },
-          // Mejorar nombres de chunks
           chunkFileNames: 'assets/js/[name]-[hash].js',
           entryFileNames: 'assets/js/[name]-[hash].js',
           assetFileNames: 'assets/css/[name]-[hash].[ext]',
         },
       },
-      // Aumentar límite de advertencia de chunk
       chunkSizeWarningLimit: 1000,
     },
-    // Optimizaciones para producción
     esbuild: {
       drop: isProduction ? ['console', 'debugger'] : [],
     },
-    // Variables de entorno disponibles en el cliente
     define: {
       __APP_VERSION__: JSON.stringify('2.4.0'),
       'process.env.NODE_ENV': JSON.stringify(isProduction ? 'production' : 'development'),
