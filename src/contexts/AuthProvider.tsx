@@ -21,6 +21,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isUsingJWT, setIsUsingJWT] = useState(false);
   const toast = useToast();
 
+  // URL de la API (desde variable de entorno o por defecto)
+  const getApiUrl = (): string => {
+    return import.meta.env.VITE_API_URL || 'https://quicknote-api-app-react.onrender.com';
+  };
+
   // Funcion para decodificar JWT
   const decodeJWT = (token: string): any => {
     try {
@@ -312,17 +317,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [isUsingJWT]);
 
   // ============================================
-  // FUNCION LOGIN
+  // FUNCION LOGIN (CORREGIDA CON URL COMPLETA)
   // ============================================
   const login = async (email: string, password: string): Promise<LoginResponse> => {
     setIsLoading(true);
     setError(null);
     
     try {
-      console.log('Iniciando sesion con email:', email);
-      console.log('Llamando a POST /api/v1/auth/login');
+      const API_URL = getApiUrl();
+      const url = `${API_URL}/api/v1/auth/login`;
       
-      const response = await fetch('/api/v1/auth/login', {
+      console.log('Iniciando sesion con email:', email);
+      console.log('Llamando a POST', url);
+      
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -423,16 +431,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // ============================================
-  // LOGIN CON PASSKEY
+  // LOGIN CON PASSKEY (CORREGIDO)
   // ============================================
   const loginWithPasskey = async (email: string, credential: any): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
     
     try {
-      console.log('Iniciando sesion con passkey para:', email);
+      const API_URL = getApiUrl();
+      const url = `${API_URL}/api/v1/passkeys/login/complete`;
       
-      const response = await fetch('/api/v1/passkeys/login/complete', {
+      console.log('Iniciando sesion con passkey para:', email);
+      console.log('Llamando a POST', url);
+      
+      const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -559,14 +571,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // ============================================
-  // REGISTRO CON PASSKEY
+  // REGISTRO CON PASSKEY (CORREGIDO)
   // ============================================
   const registerWithPasskey = async (email: string, name: string): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
     
     try {
+      const API_URL = getApiUrl();
+      const url = `${API_URL}/api/v1/passkeys/register/complete`;
+      
       console.log('Registrando passkey para:', email);
+      console.log('Llamando a POST', url);
       
       const { data: { users }, error: userError } = await supabaseAdmin.auth.admin.listUsers();
       
@@ -592,7 +608,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('Usuario existente encontrado:', userId);
       }
       
-      const response = await fetch('/api/v1/passkeys/register/complete', {
+      const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, name, userId }),
@@ -680,7 +696,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // ============================================
-  // CHANGE PASSWORD (con sesión activa)
+  // CHANGE PASSWORD (con sesión activa) (CORREGIDO)
   // ============================================
   const changePassword = async (currentPassword: string, newPassword: string): Promise<{
     success: boolean;
@@ -697,9 +713,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('No hay sesión activa');
       }
       
-      console.log('Cambiando contraseña para usuario:', user?.email);
+      const API_URL = getApiUrl();
+      const url = `${API_URL}/api/v1/auth/change-password`;
       
-      const response = await fetch('/api/v1/auth/change-password', {
+      console.log('Cambiando contraseña para usuario:', user?.email);
+      console.log('Llamando a POST', url);
+      
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
