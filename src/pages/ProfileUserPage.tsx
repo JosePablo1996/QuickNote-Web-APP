@@ -4,7 +4,7 @@ import { useTheme } from '../hooks/useTheme';
 import { useAuth } from '../hooks/useAuth';
 import { useNotes } from '../hooks/useNotes';
 import { useToast } from '../hooks/useToast';
-import LoadingSpinner from '../components/ui/LoadingSpinner';
+import LoadingSpinner from '../contexts/components/ui/LoadingSpinner';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft,

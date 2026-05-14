@@ -1,13 +1,13 @@
-import React, { createContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useState, useEffect, useRef } from 'react';
 import { Note, NoteCreate, NoteUpdate } from '../models/Note';
 import { api } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
 
 export interface NoteContextType {
-  notes: Note[];           // Notas activas (no archivadas, no eliminadas)
-  archivedNotes: Note[];    // Notas archivadas
-  deletedNotes: Note[];     // Notas en papelera
+  notes: Note[];
+  archivedNotes: Note[];
+  deletedNotes: Note[];
   isLoading: boolean;
   error: string | null;
   
@@ -46,12 +46,10 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { user, isAuthenticated } = useAuth();
   const toast = useToast();
   
-  // Refs para controlar cargas
+  // Refs para controlar cargas y evitar bucles
   const isMounted = useRef(true);
   const loadingRef = useRef(false);
-  const initialLoadRef = useRef(false);
-  const prevUserIdRef = useRef<string | undefined>();
-  const clearingDataRef = useRef(false);
+  const hasLoaded = useRef(false);
 
   useEffect(() => {
     isMounted.current = true;
@@ -60,30 +58,20 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // ============== FUNCIÓN DE UTILIDAD ==============
 
-  /**
-   * Normalizar una nota para asegurar que todos los campos estén en el formato correcto
-   */
   const normalizeNote = (note: any): Note => {
     if (!note) return note;
     
     return {
       ...note,
-      // ✅ Asegurar que user_id sea string (si viene del backend)
       user_id: note.user_id ? String(note.user_id) : null,
-      // ✅ Asegurar que tags sea array
       tags: Array.isArray(note.tags) ? note.tags : [],
-      // ✅ Asegurar valores booleanos
       is_favorite: !!note.is_favorite,
       is_archived: !!note.is_archived,
-      // ✅ Asegurar que fechas sean strings
       created_at: note.created_at || new Date().toISOString(),
       updated_at: note.updated_at || note.created_at || new Date().toISOString(),
     };
   };
 
-  /**
-   * Normalizar un array de notas
-   */
   const normalizeNotes = (notesArray: any[]): Note[] => {
     if (!Array.isArray(notesArray)) return [];
     return notesArray.map(normalizeNote).filter(Boolean);
@@ -101,31 +89,17 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // ============== LIMPIEZA DE DATOS ==============
 
-  /**
-   * Limpiar todos los datos del usuario actual
-   */
-  const clearUserData = useCallback(() => {
-    // Evitar limpiezas múltiples
-    if (clearingDataRef.current) return;
-    
-    clearingDataRef.current = true;
+  const clearUserData = () => {
     console.log('🧹 Limpiando datos del usuario anterior');
-    
     setNotes([]);
     setArchivedNotes([]);
     setDeletedNotes([]);
-    initialLoadRef.current = false;
-    prevUserIdRef.current = undefined;
-    
-    // Resetear el ref después de un tiempo
-    setTimeout(() => {
-      clearingDataRef.current = false;
-    }, 100);
-  }, []);
+    hasLoaded.current = false;
+  };
 
-  // ============== CARGA DE NOTAS ==============
+  // ============== CARGA DE NOTAS (SIN useCallback) ==============
 
-  const loadNotes = useCallback(async () => {
+  const loadNotes = async () => {
     if (!isAuthenticated || !user || loadingRef.current) return;
     
     loadingRef.current = true;
@@ -136,14 +110,14 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('📥 Cargando notas para usuario:', user.id);
       const data = await api.getNotes(false);
       
-      if (!isMounted.current) return;
+      if (!isMounted.current) {
+        loadingRef.current = false;
+        return;
+      }
       
       const allNotes = ensureArray(data);
-      
-      // ✅ Normalizar todas las notas
       const normalizedNotes = normalizeNotes(allNotes);
       
-      // Clasificamos las notas
       const active = normalizedNotes.filter((note: Note) => !note.is_archived);
       const archived = normalizedNotes.filter((note: Note) => note.is_archived);
 
@@ -152,56 +126,45 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       console.log(`✅ ${active.length} activas, ${archived.length} archivadas cargadas`);
     } catch (err) {
-      if (!isMounted.current) return;
+      if (!isMounted.current) {
+        loadingRef.current = false;
+        return;
+      }
       const message = err instanceof Error ? err.message : 'Error al cargar notas';
       setError(message);
       toast.error(message);
       console.error('Error loading notes:', err);
     } finally {
-      if (isMounted.current) setIsLoading(false);
+      if (isMounted.current) {
+        setIsLoading(false);
+      }
       loadingRef.current = false;
     }
-  }, [isAuthenticated, user, toast]);
+  };
 
-  const loadArchivedNotes = useCallback(async () => {
+  const loadArchivedNotes = async () => {
     if (!isAuthenticated || !user) return;
     await loadNotes();
-  }, [isAuthenticated, user, loadNotes]);
+  };
 
-  const loadDeletedNotes = useCallback(async () => {
+  const loadDeletedNotes = async () => {
     console.log(`🗑️ ${deletedNotes.length} notas en papelera local`);
-  }, [deletedNotes.length]);
+  };
 
-  // Carga inicial - SOLO cuando el usuario cambia
+  // ============== CARGA INICIAL - SOLO UNA VEZ ==============
+
   useEffect(() => {
-    // Si no hay usuario autenticado, limpiar datos
-    if (!isAuthenticated || !user) {
-      if (prevUserIdRef.current !== undefined) {
-        clearUserData();
-      }
-      return;
+    if (isAuthenticated && user && !hasLoaded.current) {
+      hasLoaded.current = true;
+      console.log('📥 Carga inicial de notas para:', user.id);
+      loadNotes();
     }
-
-    // Si el usuario cambió, limpiar datos anteriores y cargar nuevos
-    if (user.id !== prevUserIdRef.current) {
-      console.log('👤 Usuario cambió, limpiando notas anteriores');
-      
-      // Limpiar antes de cargar nuevas notas
-      if (prevUserIdRef.current !== undefined) {
-        clearUserData();
-      }
-      
-      prevUserIdRef.current = user.id;
-      initialLoadRef.current = true;
-      
-      // Pequeño retraso para asegurar que la limpieza termine
-      setTimeout(() => {
-        if (isMounted.current) {
-          loadNotes();
-        }
-      }, 50);
+    
+    if (!isAuthenticated) {
+      hasLoaded.current = false;
+      clearUserData();
     }
-  }, [isAuthenticated, user, loadNotes, clearUserData]);
+  }, [isAuthenticated]); // ✅ Solo depende de isAuthenticated
 
   // ============== OPERACIONES CRUD ==============
 
@@ -213,8 +176,6 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     setError(null);
     try {
-      // ✅ Asegurar que noteData tenga el formato correcto
-      // Nota: NO incluimos user_id, el backend lo asigna desde el token
       const noteToSend: NoteCreate = {
         title: noteData.title,
         content: noteData.content || '',
@@ -227,7 +188,6 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const newNote = await api.createNote(noteToSend);
       if (!newNote) throw new Error('Error al crear nota');
       
-      // ✅ Normalizar la nota recibida
       const normalizedNote = normalizeNote(newNote);
       
       if (isMounted.current) {
@@ -257,7 +217,6 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     setError(null);
     try {
-      // ✅ Construir objeto de actualización limpio
       const updateData: NoteUpdate = {};
       if (noteData.title !== undefined) updateData.title = noteData.title;
       if (noteData.content !== undefined) updateData.content = noteData.content;
@@ -270,7 +229,6 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const updatedNote = await api.updateNote(id, updateData);
       if (!updatedNote) throw new Error('Error al actualizar nota');
 
-      // ✅ Normalizar la nota actualizada
       const normalizedNote = normalizeNote(updatedNote);
 
       if (isMounted.current) {
@@ -300,7 +258,6 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const deletedNote = await api.softDeleteNote(id);
       if (!deletedNote) throw new Error('Error al mover a papelera');
       
-      // ✅ Normalizar la nota eliminada
       const normalizedNote = normalizeNote(deletedNote);
       
       if (isMounted.current) {
@@ -328,12 +285,12 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const updatedNote = await api.updateNote(id, { is_favorite: !note.is_favorite });
       if (!updatedNote) throw new Error('Error al actualizar favorito');
 
-      // ✅ Normalizar la nota actualizada
       const normalizedNote = normalizeNote(updatedNote);
 
       if (isMounted.current) {
         setNotes(prev => prev.map(n => n.id === id ? normalizedNote : n));
         setArchivedNotes(prev => prev.map(n => n.id === id ? normalizedNote : n));
+        
         const message = normalizedNote.is_favorite ? '⭐ Añadida a favoritos' : '☆ Eliminada de favoritos';
         toast.success(message);
       }
@@ -348,21 +305,29 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const toggleArchive = async (id: string): Promise<boolean> => {
     try {
       const note = notes.find(n => n.id === id) || archivedNotes.find(n => n.id === id);
-      if (!note) return false;
+      if (!note) {
+        console.error('Nota no encontrada:', id);
+        return false;
+      }
 
       const updatedNote = await api.updateNote(id, { is_archived: !note.is_archived });
       if (!updatedNote) throw new Error('Error al archivar/desarchivar');
 
-      // ✅ Normalizar la nota actualizada
       const normalizedNote = normalizeNote(updatedNote);
 
       if (isMounted.current) {
         if (normalizedNote.is_archived) {
           setNotes(prev => prev.filter(n => n.id !== id));
-          setArchivedNotes(prev => [normalizedNote, ...prev]);
+          setArchivedNotes(prev => {
+            const filtered = prev.filter(n => n.id !== id);
+            return [normalizedNote, ...filtered];
+          });
         } else {
           setArchivedNotes(prev => prev.filter(n => n.id !== id));
-          setNotes(prev => [normalizedNote, ...prev]);
+          setNotes(prev => {
+            const filtered = prev.filter(n => n.id !== id);
+            return [normalizedNote, ...filtered];
+          });
         }
         
         const message = normalizedNote.is_archived ? '📦 Nota archivada' : '📂 Nota desarchivada';
@@ -381,7 +346,6 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const restoredNote = await api.restoreNote(id);
       if (!restoredNote) throw new Error('Error al restaurar nota');
 
-      // ✅ Normalizar la nota restaurada
       const normalizedNote = normalizeNote(restoredNote);
 
       if (isMounted.current) {
@@ -422,7 +386,6 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('🔄 Reemplazando todas las notas');
       
-      // Eliminar todas las notas actuales
       for (const note of notes) {
         await api.deleteNote(note.id);
       }
@@ -433,7 +396,6 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await api.deleteNote(note.id);
       }
       
-      // Crear las nuevas notas
       for (const note of newNotes) {
         const noteData: NoteCreate = {
           title: note.title,

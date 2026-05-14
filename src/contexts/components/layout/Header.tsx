@@ -1,8 +1,9 @@
 import React from 'react';
-import { useTheme } from '../../hooks/useTheme';
-import { useAuth } from '../../hooks/useAuth';
+import { useTheme } from '../../../hooks/useTheme';
+import { useAuth } from '../../../hooks/useAuth';
 import { Menu, MoreVertical, Sun, Moon, Edit } from 'lucide-react';
 import { motion } from 'framer-motion';
+import GreetingWidget from '../ui/GreetingWidget';
 
 interface HeaderProps {
   selectedCategory: string;
@@ -19,22 +20,8 @@ const Header: React.FC<HeaderProps> = ({
   onRightMenuTap,
   availableTags,
 }) => {
-  const { isDarkMode, toggleTheme } = useTheme(); // ✅ CORREGIDO: useTheme devuelve isDarkMode, no theme
+  const { isDarkMode, toggleTheme } = useTheme();
   const { user } = useAuth();
-
-  // Obtener saludo según la hora
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour >= 5 && hour < 12) {
-      return { message: '¡Buenos días!', icon: '☀️' };
-    } else if (hour >= 12 && hour < 19) {
-      return { message: '¡Buenas tardes!', icon: '🌤️' };
-    } else {
-      return { message: '¡Buenas noches!', icon: '🌙' };
-    }
-  };
-
-  const greeting = getGreeting();
 
   return (
     <header className="relative">
@@ -64,7 +51,7 @@ const Header: React.FC<HeaderProps> = ({
               <Menu className="w-5 h-5 text-white" />
             </motion.button>
 
-            {/* Logo y nombre de la app - MEJORADO como en la imagen */}
+            {/* Logo y nombre de la app */}
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -75,7 +62,6 @@ const Header: React.FC<HeaderProps> = ({
                 <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 shadow-xl flex items-center justify-center transform -rotate-6 hover:rotate-0 transition-transform duration-300">
                   <Edit className="w-5 h-5 text-white" />
                 </div>
-                {/* Efecto de sombra */}
                 <div className="absolute -bottom-1 -right-1 w-10 h-10 rounded-2xl bg-black/20 blur-sm -z-10"></div>
               </div>
               
@@ -89,14 +75,13 @@ const Header: React.FC<HeaderProps> = ({
                     Note
                   </span>
                 </h1>
-                {/* Línea decorativa */}
                 <div className="h-0.5 w-16 bg-gradient-to-r from-amber-400 to-blue-400 rounded-full mt-1"></div>
               </div>
             </motion.div>
 
             {/* Botones derecho */}
             <div className="flex items-center gap-2">
-              {/* Theme Toggle - AHORA SOL/LUNA según el modo */}
+              {/* Theme Toggle */}
               <motion.button
                 whileHover={{ scale: 1.05, rotate: 15 }}
                 whileTap={{ scale: 0.95 }}
@@ -106,9 +91,9 @@ const Header: React.FC<HeaderProps> = ({
                 title={isDarkMode ? 'Modo claro' : 'Modo oscuro'}
               >
                 {isDarkMode ? (
-                  <Sun className="w-5 h-5 text-white" /> // 🌞 Sol en modo oscuro (para cambiar a claro)
+                  <Sun className="w-5 h-5 text-white" />
                 ) : (
-                  <Moon className="w-5 h-5 text-white" /> // 🌙 Luna en modo claro (para cambiar a oscuro)
+                  <Moon className="w-5 h-5 text-white" />
                 )}
               </motion.button>
 
@@ -126,20 +111,12 @@ const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* Mensaje de saludo - Estilo mejorado */}
-          <div className="flex justify-center mb-4">
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="flex items-center gap-2 px-5 py-2 bg-white/20 backdrop-blur-sm rounded-full border border-white/30"
-            >
-              <span className="text-lg" aria-hidden="true">{greeting.icon}</span>
-              <span className="text-sm font-medium text-white">
-                {greeting.message}
-                {user?.name && `, ${user.name.split(' ')[0]}`}
-              </span>
-            </motion.div>
+          {/* Widget de saludo - con diseño centrado y glassmorphism */}
+          <div className="mb-4">
+            <GreetingWidget 
+              userName={user?.name}
+              userAvatar={user?.avatar}
+            />
           </div>
 
           {/* Dropdown de etiquetas */}

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTheme } from '../../hooks/useTheme';
-import { useAuth } from '../../hooks/useAuth';
-import { useToast } from '../../hooks/useToast';
-import { useNotes } from '../../hooks/useNotes';
+import { useTheme } from '../../../hooks/useTheme';
+import { useAuth } from '../../../hooks/useAuth';
+import { useToast } from '../../../hooks/useToast';
+import { useNotes } from '../../../hooks/useNotes';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -15,8 +15,6 @@ import {
   Share2,
   Printer,
   Eye,
-  Grid3x3,
-  Rows,
   Clock,
   Sparkles,
   Cloud,
@@ -36,13 +34,14 @@ import {
   Users,
   Bell,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
+  Moon,
+  Sun
 } from 'lucide-react';
 
 interface RightMenuProps {
   isOpen: boolean;
   onClose: () => void;
-  onViewList?: () => void;
   onSync?: () => void;
   onImport?: () => void;
 }
@@ -67,18 +66,16 @@ interface MenuSection {
 const RightMenu: React.FC<RightMenuProps> = ({
   isOpen,
   onClose,
-  onViewList,
   onSync,
   onImport,
 }) => {
   const navigate = useNavigate();
   const { isDarkMode, toggleTheme } = useTheme();
-  const { logout } = useAuth(); // Eliminado 'user' que no se usaba
+  const { logout } = useAuth();
   const { success, error: showError, info } = useToast();
-  const { notes, syncNotes } = useNotes(); // Eliminado 'isLoading' que no se usaba
+  const { notes, syncNotes } = useNotes();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(true);
   const [autoSync, setAutoSync] = useState(true);
@@ -145,15 +142,6 @@ const RightMenu: React.FC<RightMenuProps> = ({
         showError('Error al sincronizar');
         setTimeout(() => setSyncStatus('idle'), 2000);
       }
-    }
-  };
-
-  const handleViewModeToggle = () => {
-    const newMode = viewMode === 'grid' ? 'list' : 'grid';
-    setViewMode(newMode);
-    info(`Vista ${newMode === 'grid' ? 'cuadrícula' : 'lista'} activada`);
-    if (onViewList) {
-      onViewList();
     }
   };
 
@@ -248,18 +236,18 @@ const RightMenu: React.FC<RightMenuProps> = ({
     return colors[color] || 'bg-blue-500/20';
   };
 
-  // Secciones del menú derecho - SIN PERSONALIZACIÓN
+  // Secciones del menú derecho - SIN el cambio de vista
   const menuSections: MenuSection[] = [
     {
-      title: 'Vista',
+      title: 'Apariencia',
       icon: <Eye className="w-4 h-4" />,
       items: [
         {
-          icon: viewMode === 'grid' ? <Grid3x3 className="w-5 h-5" /> : <Rows className="w-5 h-5" />,
-          label: viewMode === 'grid' ? 'Vista cuadrícula' : 'Vista lista',
-          description: `Cambiar a vista ${viewMode === 'grid' ? 'lista' : 'cuadrícula'}`,
-          onClick: handleViewModeToggle,
-          color: 'blue',
+          icon: isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />,
+          label: isDarkMode ? 'Modo claro' : 'Modo oscuro',
+          description: isDarkMode ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro',
+          onClick: toggleTheme,
+          color: 'purple',
           action: 'toggle',
         },
         {
@@ -267,7 +255,7 @@ const RightMenu: React.FC<RightMenuProps> = ({
           label: compactMode ? 'Modo normal' : 'Modo compacto',
           description: compactMode ? 'Desactivar vista compacta' : 'Activar vista compacta',
           onClick: handleToggleCompactMode,
-          color: 'purple',
+          color: 'blue',
           action: 'toggle',
         },
         {
@@ -376,7 +364,7 @@ const RightMenu: React.FC<RightMenuProps> = ({
         {
           icon: <Clock className="w-5 h-5" />,
           label: 'Cambios recientes',
-          description: 'v1.4.0 · 10 cambios',
+          description: 'v2.4.0 · 7 actualizaciones implementadas',
           onClick: () => navigate('/changelog'),
           color: 'gray',
         },
@@ -412,7 +400,7 @@ const RightMenu: React.FC<RightMenuProps> = ({
 
   return (
     <>
-      {/* Overlay con efecto glass */}
+      {/* Overlay con efecto más sutil */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -421,7 +409,7 @@ const RightMenu: React.FC<RightMenuProps> = ({
         className="fixed inset-0 z-40"
         onClick={onClose}
       >
-        <div className="absolute inset-0 bg-gradient-to-tl from-purple-900/60 via-blue-900/40 to-indigo-900/60 backdrop-blur-md" />
+        <div className="absolute inset-0 bg-black/40" />
       </motion.div>
 
       {/* Menú lateral derecho */}
@@ -433,10 +421,10 @@ const RightMenu: React.FC<RightMenuProps> = ({
         className={`
           fixed top-0 right-0 h-full w-96 z-50 overflow-y-auto
           ${isDarkMode 
-            ? 'bg-gray-900/95 backdrop-blur-xl' 
-            : 'bg-white/95 backdrop-blur-xl'
+            ? 'bg-gray-900' 
+            : 'bg-white'
           }
-          shadow-2xl rounded-l-3xl border-l border-white/20
+          shadow-2xl rounded-l-3xl
         `}
       >
         {/* Header del menú con gradiente */}
@@ -490,7 +478,7 @@ const RightMenu: React.FC<RightMenuProps> = ({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="mb-6 p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 backdrop-blur-sm rounded-xl border border-white/20"
+            className="mb-6 p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-xl"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -671,7 +659,7 @@ const RightMenu: React.FC<RightMenuProps> = ({
             className="mt-8 pt-4 border-t border-gray-200 dark:border-gray-700"
           >
             <p className="text-xs text-center text-gray-500 dark:text-gray-500">
-              QuickNote v2.0.0 · {new Date().toLocaleDateString()}
+              QuickNote v2.4.0 · {new Date().toLocaleDateString()}
             </p>
           </motion.div>
         </div>
@@ -704,8 +692,8 @@ const RightMenu: React.FC<RightMenuProps> = ({
               className={`
                 relative w-full max-w-md rounded-2xl overflow-hidden
                 ${isDarkMode 
-                  ? 'bg-gray-800/95 backdrop-blur-xl' 
-                  : 'bg-white/95 backdrop-blur-xl'
+                  ? 'bg-gray-800' 
+                  : 'bg-white'
                 }
                 border-2 border-white/30 shadow-2xl
               `}

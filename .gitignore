@@ -11,7 +11,7 @@ node_modules/
 # ============================================
 # 🧪 Testing
 # ============================================
-coverage
+coverage/
 .coverage
 .nyc_output
 *.test.ts
@@ -22,10 +22,10 @@ coverage
 # ============================================
 # 🚀 Production Builds
 # ============================================
-dist
-dist-ssr
-build
-out
+dist/
+dist-ssr/
+build/
+out/
 *.tgz
 *.tar.gz
 
@@ -40,12 +40,16 @@ out
 .env.production
 .env.staging
 .env.server
-.env.example   # ✅ El ejemplo sí se puede subir
+.env.development.txt
+.envserver.txt
+
+# El ejemplo sí se puede subir
+!.env.example
 
 # ============================================
 # 📝 Logs
 # ============================================
-logs
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -87,30 +91,24 @@ $RECYCLE.BIN/
 .cache/
 
 # ============================================
-# 📘 TypeScript
+# 📘 TypeScript (build outputs)
 # ============================================
 *.tsbuildinfo
 tsconfig.tsbuildinfo
-# Los archivos compilados JS (si usas compilación)
-*.js
-*.js.map
-!server.js    # ✅ Excluir server.js si lo generas manualmente
-!vite.config.js
-!tailwind.config.js
-!postcss.config.js
-!eslint.config.js
 
 # ============================================
-# 📦 Package Managers
+# 📦 Package Managers - Lock files (subir solo uno)
 # ============================================
+# Descomenta el que uses:
+
 # npm
-package-lock.json   # ✅ QUITADO: subir package-lock.json es buena práctica
+# package-lock.json
 
 # yarn
-yarn.lock          # ✅ QUITADO: subir yarn.lock es buena práctica
+# yarn.lock
 
 # pnpm
-pnpm-lock.yaml     # ✅ QUITADO: subir pnpm-lock.yaml es buena práctica
+# pnpm-lock.yaml
 
 # ============================================
 # 🗄️ Database
@@ -130,22 +128,14 @@ tmp/
 # ============================================
 # 📁 Project Specific
 # ============================================
-# Archivos específicos de tu proyecto que no deben subirse
 *.pem
 *.key
 *.crt
 secrets/
-
-# ============================================
-# 🔒 Security
-# ============================================
-# Archivos de claves y certificados
-*.pem
-*.key
-*.crt
-*.p12
-*.pfx
-secrets/
+*.bak
+*.backup
+*.old
+*.orig
 
 # ============================================
 # 🧠 Memory / Cache
@@ -157,17 +147,15 @@ secrets/
 .stylelintcache
 
 # ============================================
-# 📦 Backup Files
-# ============================================
-*.bak
-*.backup
-*.old
-*.orig
-
-# ============================================
 # 📊 Reports
 # ============================================
 reports/
 *.html
 test-results/
 junit.xml
+
+# ============================================
+# 🚫 Archivos específicos que no deben subirse
+# ============================================
+nodemon.json
+Variables_De_Entorno_Fronted_QuickNote.txt

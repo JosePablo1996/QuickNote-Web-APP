@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useToast, ToastType } from '../../hooks/useToast';
+import { useToast, ToastType } from '../../../hooks/useToast';
 import {
   CheckCircle,
   XCircle,

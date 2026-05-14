@@ -5,8 +5,8 @@ import { useNotes } from '../hooks/useNotes';
 import { useToast } from '../hooks/useToast';
 import { TagStats } from '../models/Tag';
 import { getTagStatsFromNotes, getTagColor } from '../utils/tagUtils'; // Eliminado getTagIcon
-import TagCloud from '../components/tags/TagCloud';
-import LoadingSpinner from '../components/ui/LoadingSpinner';
+import TagCloud from '../contexts/components/tags/TagCloud';
+import LoadingSpinner from '../contexts/components/ui/LoadingSpinner';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft,

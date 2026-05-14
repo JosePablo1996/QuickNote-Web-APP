@@ -2,11 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useNotes } from '../hooks/useNotes';
 import { useTheme } from '../hooks/useTheme';
-import NoteForm from '../components/notes/NoteForm';
-import LoadingSpinner from '../components/ui/LoadingSpinner';
+import NoteForm from '../contexts/components/notes/NoteForm';
+import LoadingSpinner from '../contexts/components/ui/LoadingSpinner';
 import { Note, NoteCreate, NoteUpdate } from '../models/Note';
 import { motion } from 'framer-motion';
-import { ArrowLeft, AlertCircle } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Sparkles, LayoutGrid } from 'lucide-react';
 
 const NoteFormPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -31,7 +31,6 @@ const NoteFormPage: React.FC = () => {
       setError(null);
       console.log('🔍 Cargando nota para edición, ID:', id);
       
-      // Pequeño retraso para asegurar que las notas estén cargadas
       const timer = setTimeout(() => {
         try {
           const foundNote = getNoteById(id);
@@ -63,15 +62,16 @@ const NoteFormPage: React.FC = () => {
     
     try {
       if (id && note) {
-        // ✅ MODO EDICIÓN: Asegurar que NO se envíe user_id
+        // MODO EDICIÓN - Incluir shape si existe
         console.log('✏️ Actualizando nota ID:', id);
         console.log('📝 Datos recibidos del formulario:', noteData);
         
-        // Crear un objeto limpio con SOLO los campos permitidos
+        // Crear un objeto limpio con SOLO los campos permitidos incluyendo shape
         const cleanUpdateData: NoteUpdate = {
           title: noteData.title,
           content: noteData.content,
           color: noteData.color,
+          shape: noteData.shape, // Nueva propiedad
           is_favorite: noteData.is_favorite,
           is_archived: noteData.is_archived,
           tags: noteData.tags,
@@ -82,7 +82,7 @@ const NoteFormPage: React.FC = () => {
           cleanUpdateData.deleted_at = noteData.deleted_at;
         }
         
-        console.log('✅ Datos limpios a actualizar (sin user_id):', cleanUpdateData);
+        console.log('✅ Datos limpios a actualizar (con shape):', cleanUpdateData);
         
         const updated = await updateNote(id, cleanUpdateData);
         if (updated) {
@@ -93,15 +93,21 @@ const NoteFormPage: React.FC = () => {
           setIsSubmitting(false);
         }
       } else {
-        // ✅ MODO CREACIÓN: Asegurar que NO se envíe user_id
+        // MODO CREACIÓN - Incluir shape
         console.log('➕ Creando nueva nota con datos:', noteData);
         
-        // Extraer user_id si existe (por si acaso) y crear objeto limpio
+        // Extraer user_id si existe y crear objeto limpio con shape
         const { user_id, ...cleanCreateData } = noteData as any;
         
-        console.log('✅ Datos limpios a crear (sin user_id):', cleanCreateData);
+        // Asegurar que shape tenga un valor por defecto si no viene
+        const createDataWithShape = {
+          ...cleanCreateData,
+          shape: cleanCreateData.shape || 'rounded',
+        };
         
-        const created = await createNote(cleanCreateData as NoteCreate);
+        console.log('✅ Datos limpios a crear (con shape):', createDataWithShape);
+        
+        const created = await createNote(createDataWithShape as NoteCreate);
         if (created) {
           console.log('✅ Nota creada exitosamente con ID:', created.id);
           navigate(`/notes/${created.id}`);
@@ -135,27 +141,47 @@ const NoteFormPage: React.FC = () => {
   }
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800`}>
-      {/* Botón flotante para volver */}
+    <div className={`min-h-screen transition-colors duration-300 ${
+      isDarkMode 
+        ? 'bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800' 
+        : 'bg-gradient-to-br from-gray-50 via-white to-gray-100'
+    }`}>
+      {/* Botón flotante para volver - Mejorado */}
       <motion.div
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
-        className="fixed top-4 left-4 z-10"
+        transition={{ duration: 0.3 }}
+        className="fixed top-6 left-6 z-20"
       >
         <motion.button
           whileHover={{ scale: 1.05, x: -2 }}
           whileTap={{ scale: 0.95 }}
           onClick={handleCancel}
-          className="p-3 rounded-xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border border-white/30 dark:border-gray-700/30 shadow-lg hover:shadow-xl transition-all"
+          className="group p-3 rounded-xl bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl border border-white/30 dark:border-gray-700/30 shadow-lg hover:shadow-xl transition-all duration-300"
           aria-label="Volver"
           title="Volver"
         >
-          <ArrowLeft className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+          <ArrowLeft className="w-5 h-5 text-gray-700 dark:text-gray-300 transition-transform duration-300 group-hover:-translate-x-0.5" />
         </motion.button>
       </motion.div>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-20">
-        {/* Mensaje de error si no se encuentra la nota */}
+      {/* Badge flotante de estado - Nuevo */}
+      {id && note && (
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3, delay: 0.2 }}
+          className="fixed top-6 right-6 z-20"
+        >
+          <div className="px-3 py-1.5 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs font-medium shadow-lg backdrop-blur-sm flex items-center gap-1.5">
+            <Sparkles className="w-3 h-3" />
+            <span>Editando nota</span>
+          </div>
+        </motion.div>
+      )}
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-20">
+        {/* Mensaje de error mejorado */}
         {error && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -178,29 +204,82 @@ const NoteFormPage: React.FC = () => {
           </motion.div>
         )}
 
-        {/* Título de la página */}
+        {/* Título de la página - Rediseñado */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
           className="mb-8 text-center"
         >
-          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          <div className="inline-flex items-center justify-center gap-2 mb-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center shadow-lg">
+              <LayoutGrid className="w-5 h-5 text-white" />
+            </div>
+          </div>
+          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
             {id ? 'Editar nota' : 'Crear nueva nota'}
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">
+          <p className="text-gray-600 dark:text-gray-400 mt-2 max-w-md mx-auto">
             {id 
-              ? 'Modifica el contenido de tu nota' 
-              : 'Escribe tus ideas, pensamientos o recordatorios'}
+              ? 'Modifica el contenido, color y forma de tu nota' 
+              : 'Personaliza tu nota con colores, formas y etiquetas'}
           </p>
         </motion.div>
 
-        {/* Formulario de nota */}
-        <NoteForm
-          note={note}
-          onSubmit={handleSubmit}
-          onCancel={handleCancel}
-          isSubmitting={isSubmitting}
-        />
+        {/* Formulario de nota - Ahora con layout de 2 columnas incluido */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+        >
+          <NoteForm
+            note={note}
+            onSubmit={handleSubmit}
+            onCancel={handleCancel}
+            isSubmitting={isSubmitting}
+          />
+        </motion.div>
+
+        {/* Mensaje de ayuda - Nuevo */}
+        {!id && !error && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="mt-8 text-center"
+          >
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              💡 <span className="font-medium">Tip:</span> Puedes personalizar el color y la forma de tu nota en el panel derecho.
+              Las notas con diferentes formas se ven únicas en tu colección.
+            </p>
+          </motion.div>
+        )}
+
+        {/* Información de características - Nueva para notas existentes */}
+        {id && note && !error && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-2xl mx-auto"
+          >
+            <div className="text-center p-2 rounded-lg bg-gray-100/50 dark:bg-gray-800/50 backdrop-blur-sm">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                🎨 <span className="font-medium">Color actual:</span> {note.color}
+              </p>
+            </div>
+            <div className="text-center p-2 rounded-lg bg-gray-100/50 dark:bg-gray-800/50 backdrop-blur-sm">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                ⬛ <span className="font-medium">Forma actual:</span> {note.shape || 'rounded'}
+              </p>
+            </div>
+            <div className="text-center p-2 rounded-lg bg-gray-100/50 dark:bg-gray-800/50 backdrop-blur-sm">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                🏷️ <span className="font-medium">Etiquetas:</span> {note.tags?.length || 0}
+              </p>
+            </div>
+          </motion.div>
+        )}
       </div>
     </div>
   );

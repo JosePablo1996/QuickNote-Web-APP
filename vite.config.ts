@@ -13,13 +13,24 @@ export default defineConfig({
     port: 5173,
     open: true,
     proxy: {
-      // Proxy para las rutas de passkey
       '/api': {
-        target: 'http://localhost:3001',
+        target: 'http://localhost:8000',
         changeOrigin: true,
         secure: false,
-        // No reescribimos la ruta para mantener /api
         rewrite: (path) => path,
+        // ✅ Mejor manejo de errores de proxy
+        configure: (proxy, _options) => {
+          proxy.on('error', (err, _req, _res) => {
+            console.log('⚠️ [Vite Proxy] Error de conexión con el backend:', err.message);
+            console.log('   ¿El backend está corriendo en http://localhost:8000?');
+          });
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
+            console.log(`🔄 [Vite Proxy] ${req.method} ${req.url} -> http://localhost:8000${req.url}`);
+          });
+          proxy.on('proxyRes', (proxyRes, req, _res) => {
+            console.log(`✅ [Vite Proxy] ${req.method} ${req.url} -> ${proxyRes.statusCode}`);
+          });
+        },
       },
     },
   },
@@ -35,5 +46,9 @@ export default defineConfig({
         },
       },
     },
+  },
+  // ✅ Agregar variables de entorno para el frontend
+  define: {
+    __APP_VERSION__: JSON.stringify('2.1.0'),
   },
 });

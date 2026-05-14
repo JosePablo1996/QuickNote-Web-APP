@@ -248,3 +248,122 @@
     @apply badge bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400;
   }
 }
+
+/* ============================================
+   FIX PARA MODALES Y OVERLAYS
+   ============================================ */
+
+/* Reset para el contenedor root - evitar que afecte modales */
+#root {
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+}
+
+/* Asegurar que los modales no hereden estilos conflictivos */
+.fixed.inset-0,
+.fixed.inset-0.z-50,
+.fixed.inset-0.z-40,
+.fixed.inset-0.z-\[100\],
+.fixed.inset-0.z-\[9999\],
+.fixed.inset-0.z-\[9998\] {
+  text-align: left !important;
+  margin: 0 !important;
+  max-width: none !important;
+  padding: 1rem !important;
+  box-sizing: border-box !important;
+  pointer-events: auto !important;
+}
+
+/* Asegurar que el contenido del modal no herede text-align center */
+.fixed.inset-0.z-\[100\] > div,
+.fixed.inset-0.z-\[9999\] > div,
+.fixed.inset-0.z-50 > div,
+.fixed.inset-0.z-40 > div,
+.fixed.inset-0.z-\[9998\] > div {
+  text-align: left !important;
+  margin: 0 auto !important;
+  max-width: 90vw !important;
+  max-height: 90vh !important;
+  overflow-y: auto !important;
+}
+
+/* Reset para el contenedor root en modales */
+body.modal-open {
+  overflow: hidden;
+}
+
+/* Asegurar que los backdrops cubran toda la pantalla */
+.fixed.inset-0.bg-black\/60,
+.fixed.inset-0.bg-black\/60.backdrop-blur-sm {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 9998 !important;
+}
+
+/* Asegurar que los modales tengan un z-index suficientemente alto */
+.z-modal {
+  z-index: 9999 !important;
+}
+
+.z-overlay {
+  z-index: 9998 !important;
+}
+
+/* Fix para elementos flex dentro de modales */
+.flex.items-center.justify-center {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Asegurar que el modal se centre vertical y horizontalmente */
+.fixed.inset-0.flex.items-center.justify-center {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Fix para elementos con backdrop-blur */
+.backdrop-blur-sm {
+  backdrop-filter: blur(4px) !important;
+}
+
+.backdrop-blur-xl {
+  backdrop-filter: blur(24px) !important;
+}
+
+/* Asegurar que los modales no se vean afectados por transiciones globales */
+.modal-content,
+.modal-content * {
+  transition: none !important;
+}
+
+/* Fix para animaciones de modales */
+.modal-enter {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+.modal-enter-active {
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 200ms, transform 200ms;
+}
+
+.modal-exit {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.modal-exit-active {
+  opacity: 0;
+  transform: scale(0.95);
+  transition: opacity 200ms, transform 200ms;
+}

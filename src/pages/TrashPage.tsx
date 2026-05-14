@@ -4,8 +4,8 @@ import { useTheme } from '../hooks/useTheme';
 import { useNotes } from '../hooks/useNotes';
 import { useToast } from '../hooks/useToast';
 import { Note } from '../models/Note';
-import LoadingSpinner from '../components/ui/LoadingSpinner';
-import EmptyState from '../components/ui/EmptyState';
+import LoadingSpinner from '../contexts/components/ui/LoadingSpinner';
+import EmptyState from '../contexts/components/ui/EmptyState';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft,

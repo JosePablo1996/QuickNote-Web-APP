@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import TagChip from './TagChip';
-import { getTagColor, getTagIcon } from '../../utils/tagUtils';
+import { getTagColor, getTagIcon } from '../../../utils/tagUtils';
 import { 
   Tag, 
   Hash, 

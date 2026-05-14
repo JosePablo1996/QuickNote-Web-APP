@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutGrid,
-  List,
   ArrowUpDown,
   RefreshCw,
   Upload,
@@ -10,13 +9,11 @@ import {
   Filter,
   SortAsc,
   SortDesc,
-  Calendar,
   Tag,
   Star,
   Archive,
   Trash2,
   Eye,
-  EyeOff,
   Settings,
   HelpCircle,
   FileText,
@@ -24,8 +21,7 @@ import {
   Rows,
   Clock,
   CheckCircle,
-  XCircle,
-  AlertCircle
+  XCircle
 } from 'lucide-react';
 
 interface NoteMenuProps {
@@ -60,8 +56,6 @@ const NoteMenu: React.FC<NoteMenuProps> = ({
   lastSyncTime = null,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [showSortOptions, setShowSortOptions] = useState(false);
-  const [showFilterOptions, setShowFilterOptions] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
 
   const handleSync = async () => {
@@ -86,19 +80,6 @@ const NoteMenu: React.FC<NoteMenuProps> = ({
         return <XCircle className="w-5 h-5" />;
       default:
         return <RefreshCw className="w-5 h-5" />;
-    }
-  };
-
-  const getSyncColor = () => {
-    switch (syncStatus) {
-      case 'syncing':
-        return 'from-blue-500 to-purple-500';
-      case 'success':
-        return 'from-green-500 to-emerald-500';
-      case 'error':
-        return 'from-red-500 to-rose-500';
-      default:
-        return 'from-gray-500 to-gray-600';
     }
   };
 
@@ -155,7 +136,7 @@ const NoteMenu: React.FC<NoteMenuProps> = ({
           icon: <Archive className="w-5 h-5" />,
           label: 'Archivadas',
           description: filterArchived ? 'Mostrar archivadas' : 'Ocultar archivadas',
-          onClick: onFilter,
+          onClick: () => onFilter && onFilter(),
           color: 'purple',
           badge: filterArchived ? 'Activo' : undefined,
         },
@@ -163,7 +144,7 @@ const NoteMenu: React.FC<NoteMenuProps> = ({
           icon: <Star className="w-5 h-5" />,
           label: 'Favoritas',
           description: filterFavorites ? 'Solo favoritas' : 'Todas las notas',
-          onClick: onFilter,
+          onClick: () => onFilter && onFilter(),
           color: 'yellow',
           badge: filterFavorites ? 'Activo' : undefined,
         },
@@ -171,7 +152,7 @@ const NoteMenu: React.FC<NoteMenuProps> = ({
           icon: <Tag className="w-5 h-5" />,
           label: 'Por etiqueta',
           description: 'Filtrar por etiqueta específica',
-          onClick: onFilter,
+          onClick: () => onFilter && onFilter(),
           color: 'pink',
         },
       ],
@@ -208,14 +189,14 @@ const NoteMenu: React.FC<NoteMenuProps> = ({
           icon: <Upload className="w-5 h-5" />,
           label: 'Importar notas',
           description: 'Importar desde archivo JSON',
-          onClick: onImport || (() => {}),
+          onClick: () => onImport && onImport(),
           color: 'green',
         },
         {
           icon: <Download className="w-5 h-5" />,
           label: 'Exportar notas',
           description: 'Exportar como JSON',
-          onClick: onExport || (() => {}),
+          onClick: () => onExport && onExport(),
           color: 'blue',
         },
         {

@@ -1,4 +1,6 @@
+// services/api.ts
 import { Note, NoteCreate, NoteUpdate } from '../models/Note';
+import { compressData, decompressData } from '../utils/compression';
 
 // Usar variable de entorno para la URL de la API
 const API_URL = import.meta.env.VITE_API_URL || 'https://quicknote-api-app-react.onrender.com/api/v1';
@@ -31,55 +33,111 @@ const log = {
   }
 };
 
+// ============================================
+// INTERFACES PARA PASSKEYS
+// ============================================
+
+export interface PasskeyCredential {
+  id: string;
+  credential_id: string;
+  device_name: string;
+  created_at: string;
+  last_used_at: string | null;
+}
+
+export interface PasskeyRegistrationOptions {
+  challenge_id: string;
+  options: any;
+}
+
+export interface PasskeyAuthenticationOptions {
+  challenge_id: string;
+  options: any;
+  rpId: string;
+}
+
+// ============================================
+// INTERFACES PARA 2FA
+// ============================================
+
+export interface TwoFactorEnableResponse {
+  secret: string;
+  qr_code: string;
+  manual_key: string;
+  message: string;
+}
+
+export interface TwoFactorVerifyRequest {
+  code: string;
+  secret: string;
+  password?: string;
+}
+
+export interface TwoFactorVerifyResponse {
+  success: boolean;
+  message: string;
+  backup_codes?: string[];
+}
+
+export interface TwoFactorStatusResponse {
+  enabled: boolean;
+  method: string | null;
+  created_at: string | null;
+}
+
+export interface TwoFactorLoginVerifyResponse {
+  success: boolean;
+  message: string;
+  token: string;
+  user: any;
+}
+
+// ============================================
+// INTERFACES PARA CLOUD BACKUP
+// ============================================
+
+export interface CloudBackupMetadata {
+  id: string;
+  user_id: string;
+  file_name: string;
+  file_size: number;
+  note_count: number;
+  created_at: string;
+}
+
+export interface CloudBackup extends CloudBackupMetadata {
+  notes_data: any;
+}
+
+// ============================================
+// CLASE PRINCIPAL API SERVICE
+// ============================================
+
 class ApiService {
   private baseUrl: string;
 
   constructor() {
-    // Asegurar que la URL no tenga barra al final
-    this.baseUrl = API_URL.replace(/\/$/, '');
+    if (isDevelopment()) {
+      this.baseUrl = '/api/v1';
+    } else {
+      this.baseUrl = API_URL.replace(/\/$/, '');
+    }
     
     console.log('%c🔧================================', 'color: #00ff00; font-weight: bold');
     console.log('%c🌐 API Service inicializado', 'color: #00ff00; font-weight: bold');
     console.log('%c🔧================================', 'color: #00ff00; font-weight: bold');
     console.log('📌 URL Base:', this.baseUrl);
-    console.log('🔧 Modo:', isDevelopment() ? '✅ DESARROLLO' : '🚀 PRODUCCIÓN');
-    console.log('📦 Variables de entorno:', {
-      VITE_API_URL: import.meta.env.VITE_API_URL,
-      MODE: import.meta.env.MODE,
-      DEV: import.meta.env.DEV,
-      PROD: import.meta.env.PROD
-    });
-    
-    // Verificar si la URL es localhost en desarrollo
-    if (isDevelopment() && !this.baseUrl.includes('localhost')) {
-      console.warn('⚠️ [API] Estás en modo desarrollo pero la API apunta a:', this.baseUrl);
-      console.warn('⚠️ [API] Debería ser: http://localhost:3001/api/v1');
-    }
-    
-    if (!isDevelopment() && this.baseUrl.includes('localhost')) {
-      console.warn('⚠️ [API] Estás en modo producción pero la API apunta a localhost');
-    }
-    
+    console.log('🔧 Modo:', isDevelopment() ? '✅ DESARROLLO (proxy Vite)' : '🚀 PRODUCCIÓN');
     console.log('%c🔧================================\n', 'color: #00ff00; font-weight: bold');
   }
 
   // ============== MÉTODOS DE AUTENTICACIÓN ==============
 
-  /**
-   * Obtener token de autenticación
-   */
   private getAuthToken(): string | null {
-    // Intentar diferentes keys donde podría estar el token
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
-    const tokenPreview = token ? `${token.substring(0, 20)}...` : 'null';
-    console.log(`🔑 [API] Token en localStorage: ${tokenPreview}`);
-    
     return token;
   }
 
-  /**
-   * Obtener headers con autenticación - Versión simplificada
-   */
   private getAuthHeaders(): Record<string, string> {
     const token = this.getAuthToken();
     const headers: Record<string, string> = {
@@ -88,18 +146,11 @@ class ApiService {
     
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
-      console.log('🔑 [API] Token añadido a headers:', token.substring(0, 30) + '...');
-    } else {
-      console.error('❌ [API] No hay token disponible para la petición');
-      console.log('📦 [API] localStorage keys:', Object.keys(localStorage));
     }
     
     return headers;
   }
 
-  /**
-   * Obtener ID del usuario actual
-   */
   private getCurrentUserId(): string | null {
     const userStr = localStorage.getItem('user');
     if (!userStr) return null;
@@ -112,14 +163,82 @@ class ApiService {
     }
   }
 
-  // ============== NOTES CRUD ==============
+  // ============================================
+  // ENDPOINTS CLOUD BACKUP (CON COMPRESIÓN)
+  // ============================================
 
   /**
-   * Obtener todas las notas del usuario actual
+   * Guardar backup en la nube con compresión automática
+   * ✅ NUEVO: Compresión GZIP/LZString antes de enviar
    */
-  async getNotes(deleted: boolean = false): Promise<Note[]> {
-    console.log('%c📥================================', 'color: #ffaa00; font-weight: bold');
-    console.log(`📥 [API] GET /notes?deleted=${deleted}`);
+  async saveCloudBackup(notes: any[]): Promise<CloudBackup | null> {
+    console.log('☁️ [API] POST /backup/cloud - Guardando backup en la nube');
+    console.log('📦 [API] Notas a enviar:', notes.length);
+    
+    try {
+      const token = this.getAuthToken();
+      if (!token) {
+        console.error('❌ [API] No hay token de autenticación');
+        throw new Error('No autenticado');
+      }
+
+      // ✅ COMPRESIÓN: Comprimir datos antes de enviar
+      console.log('🗜️ [API] Comprimiendo datos...');
+      const compressionResult = await compressData({ notes });
+      
+      const originalSizeKB = (compressionResult.originalSize / 1024).toFixed(2);
+      const compressedSizeKB = (compressionResult.compressedSize / 1024).toFixed(2);
+      
+      console.log(`🗜️ [API] Compresión completada: ${originalSizeKB} KB → ${compressedSizeKB} KB (${compressionResult.ratio} reducción, método: ${compressionResult.method})`);
+      
+      // Crear objeto con datos comprimidos
+      const backupData = {
+        file_name: `backup_${new Date().toISOString().replace(/[:.]/g, '-')}.json`,
+        file_size: compressionResult.compressedSize,
+        note_count: notes.length,
+        notes_data: {
+          __compressed__: true,
+          method: compressionResult.method,
+          data: compressionResult.compressed
+        }
+      };
+
+      const url = `${this.baseUrl}/backup/cloud`;
+      const headers = this.getAuthHeaders();
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(backupData)
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ [API] Error response:', errorText);
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { detail: errorText };
+        }
+        throw new Error(errorData.detail || 'Error al guardar backup en la nube');
+      }
+      
+      const data = await response.json();
+      console.log('✅ [API] Backup guardado correctamente:', data.id);
+      return data;
+      
+    } catch (error) {
+      console.error('❌ [API] Error en saveCloudBackup:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Listar backups en la nube del usuario
+   */
+  async getCloudBackups(): Promise<CloudBackupMetadata[]> {
+    console.log('☁️ [API] GET /backup/cloud - Listando backups');
     
     try {
       const token = this.getAuthToken();
@@ -128,88 +247,572 @@ class ApiService {
         return [];
       }
 
-      const url = `${this.baseUrl}/notes/?deleted=${deleted}`;
-      console.log(`🌐 [API] Fetching: ${url}`);
-      
+      const url = `${this.baseUrl}/backup/cloud`;
       const headers = this.getAuthHeaders();
-      console.log('📦 [API] Headers:', { 
-        ...headers, 
-        Authorization: headers.Authorization ? 'Bearer [HIDDEN]' : 'none' 
-      });
       
-      const startTime = Date.now();
       const response = await fetch(url, {
         method: 'GET',
         headers: headers
       });
-      const endTime = Date.now();
-      
-      console.log(`⏱️ [API] Tiempo de respuesta: ${endTime - startTime}ms`);
-      console.log(`📥 [API] Respuesta status: ${response.status} ${response.statusText}`);
       
       if (!response.ok) {
-        console.error(`❌ [API] Error response: ${response.status} ${response.statusText}`);
-        
         if (response.status === 401) {
-          console.error('❌ [API] Token inválido o expirado');
+          console.warn('⚠️ [API] No autenticado');
+          return [];
         }
-        
-        const errorText = await response.text();
-        console.error('📄 [API] Error response body:', errorText);
-        
-        console.log('%c❌================================\n', 'color: #ff0000; font-weight: bold');
         return [];
       }
       
       const data = await response.json();
-      console.log(`✅ [API] ${data.length} notas encontradas`);
-      console.log('%c✅================================\n', 'color: #00ff00; font-weight: bold');
-      
-      return Array.isArray(data) ? data : [];
+      const backups = Array.isArray(data) ? data : [];
+      console.log(`✅ [API] ${backups.length} backups encontrados`);
+      return backups;
       
     } catch (error) {
-      console.error('❌ [API] Error en getNotes:', error);
-      console.log('%c❌================================\n', 'color: #ff0000; font-weight: bold');
+      console.error('❌ [API] Error en getCloudBackups:', error);
       return [];
     }
   }
 
   /**
-   * Obtener una nota por ID
+   * Restaurar backup específico de la nube con descompresión automática
+   * ✅ NUEVO: Descompresión automática de datos comprimidos
    */
+  async restoreCloudBackup(backupId: string): Promise<any[] | null> {
+    console.log(`☁️ [API] GET /backup/cloud/${backupId} - Restaurando backup`);
+    
+    try {
+      const token = this.getAuthToken();
+      if (!token) {
+        console.error('❌ [API] No hay token de autenticación');
+        throw new Error('No autenticado');
+      }
+
+      const url = `${this.baseUrl}/backup/cloud/${backupId}`;
+      const headers = this.getAuthHeaders();
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: headers
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('❌ [API] Error:', errorData);
+        throw new Error(errorData.detail || 'Error al restaurar backup');
+      }
+      
+      const data = await response.json();
+      
+      let notes: any[] = [];
+      
+      // ✅ DESCOMPRESIÓN: Verificar si los datos están comprimidos
+      if (data.notes_data && data.notes_data.__compressed__ === true) {
+        console.log(`🗜️ [API] Datos comprimidos detectados (método: ${data.notes_data.method})`);
+        console.log(`🗜️ [API] Descomprimiendo datos...`);
+        
+        try {
+          const decompressed = await decompressData<{ notes: any[] }>(
+            data.notes_data.data,
+            data.notes_data.method
+          );
+          notes = decompressed.notes;
+          console.log(`🗜️ [API] Descompresión completada: ${notes.length} notas`);
+        } catch (decompressError) {
+          console.error('❌ [API] Error en descompresión:', decompressError);
+          throw new Error('Error al descomprimir los datos del backup');
+        }
+      } 
+      // Compatibilidad con backups antiguos (sin compresión)
+      else if (data.notes_data && Array.isArray(data.notes_data)) {
+        console.log('📦 [API] Backup sin compresión detectado (formato antiguo)');
+        notes = data.notes_data;
+      } 
+      else if (data.notes_data && data.notes_data.notes && Array.isArray(data.notes_data.notes)) {
+        console.log('📦 [API] Backup sin compresión detectado (formato objeto)');
+        notes = data.notes_data.notes;
+      }
+      else {
+        console.warn('⚠️ [API] Formato de backup no reconocido');
+      }
+      
+      console.log(`✅ [API] Backup restaurado: ${notes.length} notas`);
+      return notes;
+      
+    } catch (error) {
+      console.error('❌ [API] Error en restoreCloudBackup:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Eliminar backup de la nube
+   */
+  async deleteCloudBackup(backupId: string): Promise<boolean> {
+    console.log(`☁️ [API] DELETE /backup/cloud/${backupId} - Eliminando backup`);
+    
+    try {
+      const token = this.getAuthToken();
+      if (!token) {
+        console.error('❌ [API] No hay token de autenticación');
+        return false;
+      }
+
+      const url = `${this.baseUrl}/backup/cloud/${backupId}`;
+      const headers = this.getAuthHeaders();
+      
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: headers
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('❌ [API] Error:', errorData);
+        return false;
+      }
+      
+      console.log('✅ [API] Backup eliminado correctamente');
+      return true;
+      
+    } catch (error) {
+      console.error('❌ [API] Error en deleteCloudBackup:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Obtener información del límite de backups
+   */
+  async getBackupLimitInfo(): Promise<{ current: number; max: number; remaining: number; is_full: boolean; is_low: boolean } | null> {
+    console.log('📊 [API] GET /backup/cloud/limit/info');
+    
+    try {
+      const token = this.getAuthToken();
+      if (!token) return null;
+
+      const url = `${this.baseUrl}/backup/cloud/limit/info`;
+      const headers = this.getAuthHeaders();
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: headers
+      });
+      
+      if (!response.ok) return null;
+      
+      return await response.json();
+    } catch (error) {
+      console.error('❌ [API] Error en getBackupLimitInfo:', error);
+      return null;
+    }
+  }
+
+  // ============================================
+  // ENDPOINTS 2FA (TWO-FACTOR AUTHENTICATION)
+  // ============================================
+
+  async enableTwoFactor(): Promise<TwoFactorEnableResponse | null> {
+    console.log('🔐 [API] POST /auth/2fa/enable');
+    
+    try {
+      const url = `${this.baseUrl}/auth/2fa/enable`;
+      const headers = this.getAuthHeaders();
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: headers
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Error al iniciar activación de 2FA');
+      }
+      
+      const data = await response.json();
+      return data;
+      
+    } catch (error) {
+      console.error('❌ [API] Error en enableTwoFactor:', error);
+      throw error;
+    }
+  }
+
+  async verifyEnableTwoFactor(code: string, secret: string): Promise<TwoFactorVerifyResponse | null> {
+    console.log('🔐 [API] POST /auth/2fa/verify-enable');
+    
+    try {
+      const url = `${this.baseUrl}/auth/2fa/verify-enable`;
+      const headers = this.getAuthHeaders();
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({ code, secret })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Código inválido');
+      }
+      
+      const data = await response.json();
+      return data;
+      
+    } catch (error) {
+      console.error('❌ [API] Error en verifyEnableTwoFactor:', error);
+      throw error;
+    }
+  }
+
+  async verifyTwoFactorLogin(code: string, tempToken: string): Promise<TwoFactorLoginVerifyResponse | null> {
+    console.log('🔐 [API] POST /auth/2fa/verify-login');
+    
+    try {
+      const url = `${this.baseUrl}/auth/2fa/verify-login`;
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${tempToken}`
+        },
+        body: JSON.stringify({ code, temp_token: tempToken })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Código 2FA inválido');
+      }
+      
+      const data = await response.json();
+      
+      if (data.token) {
+        localStorage.setItem('auth_token', data.token);
+      }
+      if (data.user) {
+        localStorage.setItem('user', JSON.stringify(data.user));
+      }
+      
+      return data;
+      
+    } catch (error) {
+      console.error('❌ [API] Error en verifyTwoFactorLogin:', error);
+      throw error;
+    }
+  }
+
+  async verifyBackupCode(code: string, tempToken: string): Promise<TwoFactorLoginVerifyResponse | null> {
+    console.log('🔐 [API] POST /auth/2fa/verify-backup');
+    
+    try {
+      const url = `${this.baseUrl}/auth/2fa/verify-backup`;
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${tempToken}`
+        },
+        body: JSON.stringify({ code, temp_token: tempToken })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Código de respaldo inválido');
+      }
+      
+      const data = await response.json();
+      
+      if (data.token) {
+        localStorage.setItem('auth_token', data.token);
+      }
+      if (data.user) {
+        localStorage.setItem('user', JSON.stringify(data.user));
+      }
+      
+      return data;
+      
+    } catch (error) {
+      console.error('❌ [API] Error en verifyBackupCode:', error);
+      throw error;
+    }
+  }
+
+  async disableTwoFactor(): Promise<{ success: boolean; message: string } | null> {
+    console.log('🔐 [API] POST /auth/2fa/disable');
+    
+    try {
+      const url = `${this.baseUrl}/auth/2fa/disable`;
+      const headers = this.getAuthHeaders();
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: headers
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Error al desactivar 2FA');
+      }
+      
+      const data = await response.json();
+      return data;
+      
+    } catch (error) {
+      console.error('❌ [API] Error en disableTwoFactor:', error);
+      throw error;
+    }
+  }
+
+  async getTwoFactorStatus(): Promise<TwoFactorStatusResponse | null> {
+    console.log('🔐 [API] GET /auth/2fa/status');
+    
+    try {
+      const url = `${this.baseUrl}/auth/2fa/status`;
+      const headers = this.getAuthHeaders();
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: headers
+      });
+      
+      if (!response.ok) {
+        return null;
+      }
+      
+      const data = await response.json();
+      return data;
+      
+    } catch (error) {
+      console.error('❌ [API] Error en getTwoFactorStatus:', error);
+      return null;
+    }
+  }
+
+  // ============================================
+  // ENDPOINTS PASSKEYS
+  // ============================================
+
+  async getPasskeys(): Promise<PasskeyCredential[]> {
+    console.log('🔐 [API] GET /passkeys/list');
+    
+    try {
+      const userId = this.getCurrentUserId();
+      if (!userId) {
+        return [];
+      }
+
+      const url = `${this.baseUrl}/passkeys/list/${userId}`;
+      const headers = this.getAuthHeaders();
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: headers
+      });
+      
+      if (!response.ok) {
+        return [];
+      }
+      
+      const data = await response.json();
+      const passkeysList = data.passkeys || data.data || data || [];
+      return Array.isArray(passkeysList) ? passkeysList : [];
+      
+    } catch (error) {
+      console.error('❌ [API] Error en getPasskeys:', error);
+      return [];
+    }
+  }
+
+  async startPasskeyRegistration(email: string): Promise<PasskeyRegistrationOptions | null> {
+    console.log('🔐 [API] POST /passkeys/register/start');
+    
+    try {
+      const url = `${this.baseUrl}/passkeys/register/start`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ email })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Error al iniciar registro de passkey');
+      }
+      
+      const data = await response.json();
+      return data;
+      
+    } catch (error) {
+      console.error('❌ [API] Error en startPasskeyRegistration:', error);
+      throw error;
+    }
+  }
+
+  async completePasskeyRegistration(
+    email: string,
+    credential: any,
+    deviceName: string
+  ): Promise<boolean> {
+    console.log('🔐 [API] POST /passkeys/register/complete');
+    
+    try {
+      const url = `${this.baseUrl}/passkeys/register/complete`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({
+          email,
+          credential,
+          device_name: deviceName
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Error al completar registro de passkey');
+      }
+      
+      return true;
+      
+    } catch (error) {
+      console.error('❌ [API] Error en completePasskeyRegistration:', error);
+      throw error;
+    }
+  }
+
+  async deletePasskey(credentialId: string, userId: string): Promise<boolean> {
+    console.log('🗑️ [API] DELETE /passkeys');
+    
+    try {
+      const url = `${this.baseUrl}/passkeys/${credentialId}?user_id=${userId}`;
+      const headers = this.getAuthHeaders();
+      
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: headers
+      });
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          return true;
+        }
+        return false;
+      }
+      
+      return true;
+      
+    } catch (error) {
+      console.error('❌ [API] Error en deletePasskey:', error);
+      return false;
+    }
+  }
+
+  async startPasskeyLogin(email?: string): Promise<PasskeyAuthenticationOptions | null> {
+    console.log('🔐 [API] POST /passkeys/login/start');
+    
+    try {
+      const url = `${this.baseUrl}/passkeys/login/start`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ email: email || null })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Error al iniciar autenticación');
+      }
+      
+      const data = await response.json();
+      return data;
+      
+    } catch (error) {
+      console.error('❌ [API] Error en startPasskeyLogin:', error);
+      throw error;
+    }
+  }
+
+  async completePasskeyLogin(email: string, credential: any): Promise<{ token: string; user: any } | null> {
+    console.log('🔐 [API] POST /passkeys/login/complete');
+    
+    try {
+      const url = `${this.baseUrl}/passkeys/login/complete`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({
+          email,
+          credential
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Error al completar autenticación');
+      }
+      
+      const data = await response.json();
+      return data;
+      
+    } catch (error) {
+      console.error('❌ [API] Error en completePasskeyLogin:', error);
+      throw error;
+    }
+  }
+
+  // ============================================
+  // ENDPOINTS NOTES CRUD
+  // ============================================
+
+  async getNotes(deleted: boolean = false): Promise<Note[]> {
+    console.log(`📥 [API] GET /notes?deleted=${deleted}`);
+    
+    try {
+      const token = this.getAuthToken();
+      if (!token) {
+        return [];
+      }
+
+      const url = `${this.baseUrl}/notes/?deleted=${deleted}`;
+      const headers = this.getAuthHeaders();
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: headers
+      });
+      
+      if (!response.ok) {
+        return [];
+      }
+      
+      const data = await response.json();
+      return Array.isArray(data) ? data : [];
+      
+    } catch (error) {
+      console.error('❌ [API] Error en getNotes:', error);
+      return [];
+    }
+  }
+
   async getNoteById(id: string): Promise<Note | null> {
     console.log(`🔍 [API] GET /notes/${id}`);
     
     try {
       const token = this.getAuthToken();
       if (!token) {
-        console.warn('⚠️ [API] No hay token de autenticación');
         return null;
       }
 
       const url = `${this.baseUrl}/notes/${id}`;
-      console.log(`🌐 [API] Fetching: ${url}`);
-      
       const headers = this.getAuthHeaders();
+      
       const response = await fetch(url, {
         headers: headers
       });
       
-      console.log(`📥 [API] Respuesta status: ${response.status}`);
-      
       if (!response.ok) {
-        if (response.status === 404) {
-          console.log('📄 [API] Nota no encontrada');
-          return null;
-        }
-        console.error(`❌ [API] Error response: ${response.status}`);
-        const errorText = await response.text();
-        console.error('📄 [API] Error response body:', errorText);
         return null;
       }
       
       const note = await response.json();
-      console.log('✅ [API] Nota encontrada:', note);
       return note;
       
     } catch (error) {
@@ -218,23 +821,15 @@ class ApiService {
     }
   }
 
-  /**
-   * Crear una nueva nota
-   */
   async createNote(note: NoteCreate): Promise<Note | null> {
-    console.log('%c📝================================', 'color: #0066ff; font-weight: bold');
     console.log('📝 [API] Creando nota');
-    console.log('🌐 [API] URL Base:', this.baseUrl);
     
     try {
       const token = this.getAuthToken();
       if (!token) {
-        console.error('❌ [API] No hay token de autenticación');
-        console.log('%c❌================================\n', 'color: #ff0000; font-weight: bold');
         return null;
       }
 
-      // ✅ Crear objeto limpio sin user_id (el backend lo asigna)
       const noteToSend = {
         title: String(note.title || '').trim(),
         content: String(note.content || '').trim(),
@@ -244,92 +839,41 @@ class ApiService {
         tags: Array.isArray(note.tags) ? note.tags.map(t => String(t).trim()).filter(t => t) : []
       };
       
-      // Validaciones
       if (!noteToSend.title) {
-        console.error('❌ [API] El título es requerido');
         return null;
       }
       
       const url = `${this.baseUrl}/notes/`;
-      console.log('📤 [API] Petición POST a:', url);
-      console.log('📦 [API] Datos a enviar:', JSON.stringify(noteToSend, null, 2));
-      
       const headers = this.getAuthHeaders();
-      console.log('📦 [API] Headers:', { 
-        ...headers, 
-        Authorization: headers.Authorization ? 'Bearer [HIDDEN]' : 'none' 
-      });
       
-      const startTime = Date.now();
       const response = await fetch(url, {
         method: 'POST',
         headers: headers,
         body: JSON.stringify(noteToSend)
       });
-      const endTime = Date.now();
-      
-      console.log(`⏱️ [API] Tiempo de respuesta: ${endTime - startTime}ms`);
-      console.log(`📥 [API] Respuesta status: ${response.status} ${response.statusText}`);
-      
-      // Intentar obtener el cuerpo de la respuesta
-      const responseText = await response.text();
-      console.log('📄 [API] Respuesta raw:', responseText);
       
       if (!response.ok) {
-        console.error('❌ [API] Error en la petición:');
-        console.error(`  - Status: ${response.status}`);
-        console.error(`  - StatusText: ${response.statusText}`);
-        console.error(`  - Body: ${responseText}`);
-        
-        if (response.status === 401) {
-          console.error('❌ [API] Token inválido o expirado');
-        }
-        
-        console.log('%c❌================================\n', 'color: #ff0000; font-weight: bold');
         return null;
       }
       
-      // Parsear respuesta JSON
-      let data;
-      try {
-        data = JSON.parse(responseText);
-      } catch (e) {
-        console.error('❌ [API] Error al parsear respuesta JSON:', e);
-        console.log('%c❌================================\n', 'color: #ff0000; font-weight: bold');
-        return null;
-      }
-      
-      console.log('✅ [API] Nota creada exitosamente:');
-      console.log(`  - ID: ${data.id}`);
-      console.log(`  - Título: ${data.title}`);
-      console.log('%c✅================================\n', 'color: #00ff00; font-weight: bold');
-      
+      const data = await response.json();
       return data;
       
     } catch (error) {
       console.error('❌ [API] Error en createNote:', error);
-      if (error instanceof Error) {
-        console.error('  - Message:', error.message);
-      }
-      console.log('%c❌================================\n', 'color: #ff0000; font-weight: bold');
       return null;
     }
   }
 
-  /**
-   * Actualizar una nota existente
-   */
   async updateNote(id: string, note: NoteUpdate): Promise<Note | null> {
     console.log(`✏️ [API] PUT /notes/${id}`);
     
     try {
       const token = this.getAuthToken();
       if (!token) {
-        console.error('❌ [API] No hay token de autenticación');
         return null;
       }
 
-      // Crear objeto para actualización
       const noteToSend: Record<string, any> = {};
       
       if (note.title !== undefined) noteToSend.title = String(note.title).trim();
@@ -344,8 +888,6 @@ class ApiService {
       }
       if (note.deleted_at !== undefined) noteToSend.deleted_at = note.deleted_at;
 
-      console.log('📦 [API] Datos a enviar:', noteToSend);
-
       const url = `${this.baseUrl}/notes/${id}`;
       const headers = this.getAuthHeaders();
       
@@ -355,21 +897,11 @@ class ApiService {
         body: JSON.stringify(noteToSend)
       });
       
-      console.log(`📥 [API] Respuesta status: ${response.status}`);
-      
       if (!response.ok) {
-        console.error(`❌ [API] Error response: ${response.status}`);
-        const errorText = await response.text();
-        console.error('📄 [API] Error response body:', errorText);
-        
-        if (response.status === 401) {
-          console.error('❌ [API] Token inválido o expirado');
-        }
         return null;
       }
       
       const data = await response.json();
-      console.log('✅ [API] Nota actualizada');
       return data;
       
     } catch (error) {
@@ -378,19 +910,10 @@ class ApiService {
     }
   }
 
-  /**
-   * Eliminar una nota (hard delete)
-   */
   async deleteNote(id: string): Promise<boolean> {
     console.log(`🗑️ [API] DELETE /notes/${id}`);
     
     try {
-      const token = this.getAuthToken();
-      if (!token) {
-        console.error('❌ [API] No hay token de autenticación');
-        return false;
-      }
-
       const url = `${this.baseUrl}/notes/${id}`;
       const headers = this.getAuthHeaders();
       
@@ -399,15 +922,7 @@ class ApiService {
         headers: headers,
       });
       
-      console.log(`📥 [API] Respuesta status: ${response.status}`);
-      
-      if (response.status === 204) {
-        console.log('✅ [API] Nota eliminada');
-        return true;
-      }
-      
-      console.error(`❌ [API] Error response: ${response.status}`);
-      return false;
+      return response.status === 204 || response.ok;
       
     } catch (error) {
       console.error('❌ [API] Error en deleteNote:', error);
@@ -415,45 +930,28 @@ class ApiService {
     }
   }
 
-  /**
-   * Soft delete - mover a papelera
-   */
   async softDeleteNote(id: string): Promise<Note | null> {
-    console.log(`🗑️ [API] SOFT DELETE /notes/${id}`);
     return await this.updateNote(id, {
       deleted_at: new Date().toISOString()
     });
   }
 
-  /**
-   * Restaurar nota
-   */
   async restoreNote(id: string): Promise<Note | null> {
-    console.log(`🔄 [API] RESTORE /notes/${id}`);
     return await this.updateNote(id, {
       deleted_at: null
     });
   }
 
-  /**
-   * Obtener solo notas eliminadas
-   */
   async getDeletedNotes(): Promise<Note[]> {
     return this.getNotes(true);
   }
 
-  /**
-   * Verificar autenticación
-   */
   isAuthenticated(): boolean {
     const hasToken = !!this.getAuthToken();
     const hasUser = !!this.getCurrentUserId();
     return hasToken && hasUser;
   }
 
-  /**
-   * Obtener usuario actual
-   */
   getCurrentUser(): any {
     const userStr = localStorage.getItem('user');
     if (!userStr) return null;
@@ -468,3 +966,11 @@ class ApiService {
 
 // Exportar instancia única
 export const api = new ApiService();
+
+// Exportar también como objeto con los métodos de backup para compatibilidad
+export const backupCloudService = {
+  saveBackupToCloud: (notes: any[]) => api.saveCloudBackup(notes),
+  getCloudBackups: () => api.getCloudBackups(),
+  restoreCloudBackup: (backupId: string) => api.restoreCloudBackup(backupId),
+  deleteCloudBackup: (backupId: string) => api.deleteCloudBackup(backupId)
+};

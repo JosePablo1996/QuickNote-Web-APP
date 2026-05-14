@@ -1,17 +1,17 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
 import { 
   startRegistration, 
   startAuthentication 
 } from '@simplewebauthn/browser';
 import { Fingerprint, Mail, Loader2, ArrowRight, Shield } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth } from '../../../hooks/useAuth';
 
 interface PasskeyLoginProps {
   onSuccess?: (user: PasskeyUser) => void;
   mode?: 'login' | 'register';
   onError?: (error: string) => void;
+  deviceName?: string;
 }
 
 interface PasskeyUser {
@@ -23,16 +23,28 @@ interface PasskeyUser {
 export const PasskeyLogin: React.FC<PasskeyLoginProps> = ({ 
   onSuccess, 
   mode = 'login',
-  onError 
+  onError,
+  deviceName: customDeviceName
 }) => {
-  const [email, setEmail] = useState('');
+  const { user: authUser, loginWithPasskey } = useAuth();
+  const userEmail = authUser?.email || '';
+  
+  const [email, setEmail] = useState(userEmail);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate();
-  const { loginWithPasskey } = useAuth(); // ✅ Usar el AuthContext
+  const [challengeId, setChallengeId] = useState<string | null>(null);
 
-  // Función para obtener nombre descriptivo del dispositivo
+  useEffect(() => {
+    if (userEmail && !email) {
+      setEmail(userEmail);
+    }
+  }, [userEmail]);
+
   const getDeviceName = (): string => {
+    if (customDeviceName && customDeviceName.trim()) {
+      return customDeviceName.trim();
+    }
+    
     const userAgent = navigator.userAgent;
     const platform = navigator.platform;
     
@@ -43,15 +55,14 @@ export const PasskeyLogin: React.FC<PasskeyLoginProps> = ({
     } else if (userAgent.includes('iPhone') || userAgent.includes('iPad')) {
       return 'Face ID / Touch ID';
     } else if (userAgent.includes('Android')) {
-      return 'Biometría Android';
+      return 'Biometria Android';
     } else {
       return `Dispositivo (${platform})`;
     }
   };
 
-  // Función para manejar errores de forma consistente
   const handleError = (errorMessage: string) => {
-    console.error('❌ Error:', errorMessage);
+    console.error('Error:', errorMessage);
     setError(errorMessage);
     if (onError) onError(errorMessage);
   };
@@ -62,10 +73,9 @@ export const PasskeyLogin: React.FC<PasskeyLoginProps> = ({
       return;
     }
 
-    // Validar formato de email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      handleError('Por favor ingresa un email válido');
+      handleError('Por favor ingresa un email valido');
       return;
     }
 
@@ -73,10 +83,9 @@ export const PasskeyLogin: React.FC<PasskeyLoginProps> = ({
       setLoading(true);
       setError(null);
 
-      console.log('📨 [Register] Solicitando opciones de registro para:', email);
+      console.log('[Register] Solicitando opciones de registro para:', email);
 
-      // 1. Obtener opciones de registro del servidor
-      const optionsResponse = await fetch('/api/passkey/register/options', {
+      const optionsResponse = await fetch('/api/v1/passkeys/register/start', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -87,20 +96,20 @@ export const PasskeyLogin: React.FC<PasskeyLoginProps> = ({
 
       if (!optionsResponse.ok) {
         const errorData = await optionsResponse.json().catch(() => ({}));
-        throw new Error(errorData.error || `Error ${optionsResponse.status}: ${optionsResponse.statusText}`);
+        throw new Error(errorData.detail || errorData.error || `Error ${optionsResponse.status}`);
       }
 
-      const options = await optionsResponse.json();
-      console.log('✅ [Register] Opciones recibidas del servidor');
+      const data = await optionsResponse.json();
+      console.log('[Register] Opciones recibidas del servidor');
+      
+      setChallengeId(data.challenge_id);
 
-      // 2. Iniciar registro biométrico en el navegador
-      console.log('🔐 [Register] Iniciando registro biométrico...');
-      const attResp = await startRegistration({ optionsJSON: options });
-      console.log('✅ [Register] Registro biométrico completado');
+      console.log('[Register] Iniciando registro biometrico...');
+      const attResp = await startRegistration({ optionsJSON: data.options });
+      console.log('[Register] Registro biometrico completado');
 
-      // 3. Verificar registro con el servidor
-      console.log('📨 [Register] Enviando verificación al servidor...');
-      const verifyResponse = await fetch('/api/passkey/register/verify', {
+      console.log('[Register] Enviando verificacion al servidor...');
+      const verifyResponse = await fetch('/api/v1/passkeys/register/complete', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -108,36 +117,43 @@ export const PasskeyLogin: React.FC<PasskeyLoginProps> = ({
         },
         body: JSON.stringify({ 
           email,
-          ...attResp,
-          deviceName: getDeviceName()
+          credential: {
+            ...attResp,
+            challenge_id: data.challenge_id
+          },
+          device_name: getDeviceName()
         }),
       });
 
       if (!verifyResponse.ok) {
         const errorData = await verifyResponse.json().catch(() => ({}));
-        throw new Error(errorData.error || `Error ${verifyResponse.status}: ${verifyResponse.statusText}`);
+        throw new Error(errorData.detail || errorData.error || `Error ${verifyResponse.status}`);
       }
 
       const verification = await verifyResponse.json();
-      console.log('✅ [Register] Verificación completada:', verification);
+      console.log('[Register] Verificacion completada:', verification);
 
-      if (verification.verified) {
-        alert('✅ Passkey registrada exitosamente');
-        navigate('/login');
+      if (verification.message || verification.verified) {
+        if (onSuccess && authUser) {
+          onSuccess({
+            id: authUser.id,
+            email: authUser.email,
+            name: authUser.name
+          });
+        }
       } else {
-        throw new Error('La verificación del registro falló');
+        throw new Error('La verificacion del registro fallo');
       }
     } catch (err: unknown) {
-      console.error('❌ [Register] Error en registro:', err);
+      console.error('[Register] Error en registro:', err);
       const errorMessage = err instanceof Error ? err.message : 'Error al registrar passkey';
       
-      // Mensajes más amigables para errores comunes
       if (errorMessage.includes('not allowed')) {
         handleError('Registro cancelado por el usuario');
       } else if (errorMessage.includes('timeout')) {
         handleError('Tiempo de espera agotado. Intenta de nuevo');
       } else if (errorMessage.includes('network')) {
-        handleError('Error de conexión. Verifica tu internet');
+        handleError('Error de conexion. Verifica tu internet');
       } else {
         handleError(errorMessage);
       }
@@ -146,16 +162,16 @@ export const PasskeyLogin: React.FC<PasskeyLoginProps> = ({
     }
   };
 
+  // ✅ CORREGIDO: handleLogin ahora usa los endpoints correctos del backend
   const handleLogin = async (): Promise<void> => {
     if (!email) {
       handleError('Por favor ingresa tu email');
       return;
     }
 
-    // Validar formato de email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      handleError('Por favor ingresa un email válido');
+      handleError('Por favor ingresa un email valido');
       return;
     }
 
@@ -163,10 +179,10 @@ export const PasskeyLogin: React.FC<PasskeyLoginProps> = ({
       setLoading(true);
       setError(null);
 
-      console.log('📨 [Login] Solicitando opciones de autenticación para:', email);
+      console.log('[Login] Solicitando opciones de autenticacion para:', email);
 
-      // 1. Obtener opciones de autenticación del servidor
-      const optionsResponse = await fetch('/api/passkey/auth/options', {
+      // ✅ Paso 1: Obtener opciones de autenticación del backend
+      const optionsResponse = await fetch('/api/v1/passkeys/login/start', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -182,49 +198,72 @@ export const PasskeyLogin: React.FC<PasskeyLoginProps> = ({
           throw new Error('Usuario no encontrado o sin passkeys registradas');
         }
         
-        throw new Error(errorData.error || `Error ${optionsResponse.status}: ${optionsResponse.statusText}`);
+        throw new Error(errorData.detail || errorData.error || `Error ${optionsResponse.status}`);
       }
 
-      const options = await optionsResponse.json();
-      console.log('✅ [Login] Opciones recibidas del servidor');
+      const data = await optionsResponse.json();
+      console.log('[Login] Opciones recibidas del servidor:', data);
 
-      // 2. Iniciar autenticación biométrica en el navegador
-      console.log('🔐 [Login] Iniciando autenticación biométrica...');
-      const authResp = await startAuthentication({ optionsJSON: options });
-      console.log('✅ [Login] Autenticación biométrica completada');
+      // ✅ Paso 2: Iniciar autenticación biométrica en el navegador
+      console.log('[Login] Iniciando autenticacion biometrica...');
+      const authResp = await startAuthentication({ optionsJSON: data.options });
+      console.log('[Login] Autenticacion biometrica completada:', authResp);
 
-      // 3. ✅ AHORA: Pasar directamente al AuthContext sin verificar nuevamente
-      console.log('🔐 [Login] Llamando a loginWithPasskey del AuthContext');
-      
-      // loginWithPasskey ya hace la verificación internamente
-      const loginSuccess = await loginWithPasskey(email, authResp);
-      
-      if (loginSuccess) {
-        console.log('✅ [Login] Login con AuthContext exitoso');
+      // ✅ Paso 3: Enviar la respuesta al backend para verificarla
+      console.log('[Login] Enviando verificacion al servidor...');
+      const verifyResponse = await fetch('/api/v1/passkeys/login/complete', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ 
+          email,
+          credential: {
+            ...authResp,
+            challenge_id: data.challenge_id
+          }
+        }),
+      });
+
+      if (!verifyResponse.ok) {
+        const errorData = await verifyResponse.json().catch(() => ({}));
+        throw new Error(errorData.detail || errorData.error || `Error ${verifyResponse.status}`);
+      }
+
+      const verifyData = await verifyResponse.json();
+      console.log('[Login] Verificacion completada, token recibido');
+
+      // ✅ Paso 4: Guardar el token y redirigir
+      if (verifyData.access_token) {
+        localStorage.setItem('auth_token', verifyData.access_token);
         
-        // Obtener usuario del localStorage o del contexto
-        const userStr = localStorage.getItem('user');
-        if (userStr && onSuccess) {
-          onSuccess(JSON.parse(userStr));
+        if (verifyData.user) {
+          localStorage.setItem('user', JSON.stringify(verifyData.user));
+        }
+
+        console.log('[Login] Login con passkey exitoso');
+        
+        if (onSuccess) {
+          onSuccess(verifyData.user);
         }
       } else {
-        throw new Error('Error al establecer la sesión');
+        throw new Error('No se recibio el token de acceso');
       }
       
     } catch (err: unknown) {
-      console.error('❌ [Login] Error en login:', err);
+      console.error('[Login] Error en login:', err);
       
       const errorMessage = err instanceof Error ? err.message : 'Error al autenticar';
       
-      // Mensajes más amigables para errores comunes
       if (errorMessage.includes('not allowed')) {
-        handleError('Autenticación cancelada por el usuario');
+        handleError('Autenticacion cancelada por el usuario');
       } else if (errorMessage.includes('timeout')) {
         handleError('Tiempo de espera agotado. Intenta de nuevo');
       } else if (errorMessage.includes('network')) {
-        handleError('Error de conexión. Verifica tu internet');
-      } else if (errorMessage.includes('not found')) {
-        handleError('Usuario no encontrado o sin passkeys');
+        handleError('Error de conexion. Verifica tu internet');
+      } else if (errorMessage.includes('not found') || errorMessage.includes('no encontrada')) {
+        handleError('Usuario no encontrado o sin passkeys registradas');
       } else {
         handleError(errorMessage);
       }
@@ -239,14 +278,6 @@ export const PasskeyLogin: React.FC<PasskeyLoginProps> = ({
       handleRegister();
     } else {
       handleLogin();
-    }
-  };
-
-  const switchMode = (): void => {
-    if (mode === 'register') {
-      navigate('/login');
-    } else {
-      navigate('/register-passkey');
     }
   };
 
@@ -267,10 +298,13 @@ export const PasskeyLogin: React.FC<PasskeyLoginProps> = ({
               <Fingerprint className="w-8 h-8 text-white" />
             </div>
             <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              {mode === 'register' ? 'Registrar Passkey' : 'Iniciar Sesión'}
+              {mode === 'register' ? 'Registrar Passkey' : 'Iniciar Sesion con Passkey'}
             </h2>
             <p className="text-gray-600 dark:text-gray-400 text-sm mt-2">
-              Usa {getDeviceName()} o tu dispositivo biométrico
+              {mode === 'register' 
+                ? 'Registra tu dispositivo biometrico' 
+                : `Usa ${getDeviceName()} para acceder`
+              }
             </p>
           </div>
 
@@ -287,7 +321,7 @@ export const PasskeyLogin: React.FC<PasskeyLoginProps> = ({
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Correo electrónico
+                Correo electronico
               </label>
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -332,33 +366,10 @@ export const PasskeyLogin: React.FC<PasskeyLoginProps> = ({
             </motion.button>
           </form>
 
-          <div className="mt-6 text-center">
-            <button
-              onClick={switchMode}
-              className="text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-            >
-              {mode === 'register' ? (
-                <>
-                  ¿Ya tienes una passkey?{' '}
-                  <span className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
-                    Inicia sesión
-                  </span>
-                </>
-              ) : (
-                <>
-                  ¿No tienes passkey?{' '}
-                  <span className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
-                    Regístrate
-                  </span>
-                </>
-              )}
-            </button>
-          </div>
-
           <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-center gap-2 text-xs text-gray-500 dark:text-gray-400">
               <Shield className="w-4 h-4" />
-              <span>Tus datos biométricos nunca salen de tu dispositivo</span>
+              <span>Tus datos biometricos nunca salen de tu dispositivo</span>
             </div>
           </div>
         </div>

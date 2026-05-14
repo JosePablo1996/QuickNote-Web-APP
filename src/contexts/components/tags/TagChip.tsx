@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { getTagColor, getTagIcon } from '../../utils/tagUtils';
+import { getTagColor, getTagIcon } from '../../../utils/tagUtils';
 import { X, Check, Tag as TagIcon } from 'lucide-react';
 
 interface TagChipProps {

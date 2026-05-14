@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTheme } from '../../hooks/useTheme';
-import { useNotes } from '../../hooks/useNotes';
-import { useAuth } from '../../hooks/useAuth';
-import { useToast } from '../../hooks/useToast';
-import { getTagStatsFromNotes } from '../../utils/tagUtils';
+import { useTheme } from '../../../hooks/useTheme';
+import { useNotes } from '../../../hooks/useNotes';
+import { useAuth } from '../../../hooks/useAuth';
+import { useToast } from '../../../hooks/useToast';
+import { getTagStatsFromNotes } from '../../../utils/tagUtils';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -337,7 +337,7 @@ const LeftMenu: React.FC<LeftMenuProps> = ({ isOpen, onClose, onNavigate }) => {
 
   return (
     <>
-      {/* Overlay con degradado y blur */}
+      {/* Overlay con degradado simple - SIN BLUR EXCESIVO */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -354,12 +354,7 @@ const LeftMenu: React.FC<LeftMenuProps> = ({ isOpen, onClose, onNavigate }) => {
           }
         }}
       >
-        <div 
-          className="absolute inset-0 bg-gradient-to-tr from-purple-900/60 via-blue-900/40 to-indigo-900/60 backdrop-blur-md"
-          style={{
-            background: 'radial-gradient(circle at 20% 30%, rgba(168, 85, 247, 0.4), rgba(59, 130, 246, 0.3) 50%, rgba(139, 92, 246, 0.4))'
-          }}
-        />
+        <div className="absolute inset-0 bg-black/40" />
       </motion.div>
       
       {/* Menú lateral */}
@@ -371,10 +366,10 @@ const LeftMenu: React.FC<LeftMenuProps> = ({ isOpen, onClose, onNavigate }) => {
         className={`
           fixed top-0 left-0 h-full w-96 z-50 overflow-y-auto
           ${isDarkMode 
-            ? 'bg-gray-900/95 backdrop-blur-xl' 
-            : 'bg-white/95 backdrop-blur-xl'
+            ? 'bg-gray-900' 
+            : 'bg-white'
           }
-          shadow-2xl rounded-r-3xl border-r border-white/20
+          shadow-2xl rounded-r-3xl
         `}
       >
         {/* Header del menú con gradiente estilo LoginForm */}
@@ -400,9 +395,9 @@ const LeftMenu: React.FC<LeftMenuProps> = ({ isOpen, onClose, onNavigate }) => {
               <X className="w-4 h-4 text-white" />
             </motion.button>
 
-            {/* Contenido del header - ahora sin icono de notas y sin badge online */}
+            {/* Contenido del header */}
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              {/* Avatar clickeable - sin tooltip */}
+              {/* Avatar clickeable */}
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -427,7 +422,6 @@ const LeftMenu: React.FC<LeftMenuProps> = ({ isOpen, onClose, onNavigate }) => {
                     </div>
                   )}
                 </div>
-                {/* SIN badge de estado online y SIN tooltip */}
               </motion.button>
 
               {/* Nombre del usuario */}
@@ -449,8 +443,6 @@ const LeftMenu: React.FC<LeftMenuProps> = ({ isOpen, onClose, onNavigate }) => {
               >
                 {user?.email || ''}
               </motion.p>
-
-              {/* SIN badge de estado online */}
             </div>
           </div>
         </div>
@@ -616,8 +608,8 @@ const LeftMenu: React.FC<LeftMenuProps> = ({ isOpen, onClose, onNavigate }) => {
               className={`
                 relative w-full max-w-md rounded-2xl overflow-hidden
                 ${isDarkMode 
-                  ? 'bg-gray-800/95 backdrop-blur-xl' 
-                  : 'bg-white/95 backdrop-blur-xl'
+                  ? 'bg-gray-800' 
+                  : 'bg-white'
                 }
                 border-2 border-white/30 shadow-2xl
               `}
@@ -647,7 +639,6 @@ const LeftMenu: React.FC<LeftMenuProps> = ({ isOpen, onClose, onNavigate }) => {
                         </div>
                       )}
                     </div>
-                    {/* Mantenemos el badge online en el modal de logout */}
                     <span className="absolute bottom-1 right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white dark:border-gray-800"></span>
                   </div>
                 </div>

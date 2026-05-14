@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../hooks/useTheme';
 import { useNotes } from '../hooks/useNotes';
 import { Note } from '../models/Note';
-import LoadingSpinner from '../components/ui/LoadingSpinner';
+import LoadingSpinner from '../contexts/components/ui/LoadingSpinner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, 

@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Note } from '../../models/Note';
-import { useTheme } from '../../hooks/useTheme';
-import { getTagColor } from '../../utils/tagUtils';
-import { motion, AnimatePresence, Transition, Variants } from 'framer-motion';
+import { Note, getColorWithOpacity, NoteShape } from '../../../models/Note';
+import { useTheme } from '../../../hooks/useTheme';
+import { getTagColor } from '../../../utils/tagUtils';
+import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { 
   Star, 
   Archive, 
@@ -45,6 +45,37 @@ const NoteCard: React.FC<NoteCardProps> = ({
 
   const getNoteColor = (): string => {
     return note.color || '#3B82F6';
+  };
+
+  // Obtener la forma de la nota (con valor por defecto si no existe)
+  const getNoteShape = (): NoteShape => {
+    return (note.shape as NoteShape) || 'rounded';
+  };
+
+  // Obtener clase de forma CSS
+  const getShapeClass = (): string => {
+    const shape = getNoteShape();
+    switch (shape) {
+      case 'square': return 'rounded-none';
+      case 'rounded': return 'rounded-2xl';
+      case 'oval': return 'rounded-full aspect-video';
+      case 'pill': return 'rounded-full';
+      default: return 'rounded-2xl';
+    }
+  };
+
+  // Obtener estilos completos para la tarjeta (color tiñendo toda la nota)
+  const getCardStyle = (): React.CSSProperties => {
+    const color = getNoteColor();
+    const opacity = isDarkMode ? 0.12 : 0.08;
+    
+    return {
+      backgroundColor: getColorWithOpacity(color, opacity),
+      borderLeft: `4px solid ${color}`,
+      borderRight: isSelected ? `2px solid ${color}` : 'none',
+      boxShadow: `0 4px 12px ${getColorWithOpacity(color, 0.2)}`,
+      transition: 'all 0.3s ease',
+    };
   };
 
   const formatDate = (dateStr?: string | null): string => {
@@ -112,7 +143,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
     const remainingCount = note.tags.length - maxTags;
 
     return (
-      <div className={`flex flex-wrap gap-1.5 mt-3 ${isGridMode ? 'justify-center' : ''}`}>
+      <div className={`flex flex-wrap gap-1.5 mt-3 ${isGridMode ? 'justify-start' : ''}`}>
         {visibleTags.map((tag) => {
           const tagColor = getTagColor(tag);
           return (
@@ -148,6 +179,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
   };
 
   const noteColor = getNoteColor();
+  const noteShapeClass = getShapeClass();
   const formattedDate = formatDate(note.updated_at || note.created_at);
 
   // Opciones del menú circular
@@ -182,10 +214,9 @@ const NoteCard: React.FC<NoteCardProps> = ({
     },
   ];
 
-  const menuSize = 240; // Tamaño del menú circular
+  const menuSize = 240;
   const itemCount = menuItems.length;
 
-  // ✅ CORREGIDO: Variantes con tipos correctos para Framer Motion
   const menuVariants: Variants = {
     hidden: { 
       opacity: 0, 
@@ -210,33 +241,43 @@ const NoteCard: React.FC<NoteCardProps> = ({
     }
   };
 
+  // Variantes para la tarjeta (corregido el error de whileHover)
+  const cardVariants: Variants = {
+    initial: { opacity: 0, scale: 0.9 },
+    animate: { opacity: 1, scale: 1 },
+    exit: { opacity: 0, scale: 0.9 },
+    hover: { 
+      y: -4,
+      transition: { duration: 0.2 }
+    }
+  };
+
   return (
     <>
       <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.9 }}
-        whileHover={{ y: -4 }}
-        transition={{ duration: 0.2 }}
+        variants={cardVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        whileHover="hover"
         className={`
-          relative group rounded-2xl overflow-hidden transition-all duration-300
-          ${isDarkMode ? 'bg-gray-800/90 backdrop-blur-sm' : 'bg-white/90 backdrop-blur-sm'}
+          relative group overflow-hidden transition-shadow duration-300
+          ${noteShapeClass}
+          ${isDarkMode ? 'backdrop-blur-sm' : ''}
           ${isSelected ? 'ring-2 ring-blue-500 scale-[1.02] shadow-2xl' : 'hover:shadow-2xl'}
           border ${isDarkMode ? 'border-gray-700/50' : 'border-gray-200/50'}
           cursor-pointer
-          ${!isGridMode ? 'flex items-start p-4' : ''}
+          ${!isGridMode ? 'flex items-start' : ''}
         `}
-        style={{
-          backgroundColor: isDarkMode ? undefined : `${noteColor}08`,
-        }}
+        style={getCardStyle()}
         onClick={onClick}
       >
         {isGridMode ? (
-          /* VISTA GRID */
+          /* VISTA GRID - Color ahora tiñe toda la tarjeta */
           <>
-            {/* Cabecera con el color de la nota */}
+            {/* Barra decorativa superior con el color */}
             <div 
-              className="h-2 w-full"
+              className="h-1.5 w-full"
               style={{ 
                 background: `linear-gradient(90deg, ${noteColor}, ${noteColor}CC, ${noteColor})`,
               }}
@@ -245,7 +286,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
             <div className="p-5">
               <div className="flex items-start justify-between mb-3">
                 <h3 
-                  className={`font-bold text-lg truncate flex-1 pr-2`}
+                  className={`font-bold text-lg truncate flex-1 pr-2 transition-colors duration-300`}
                   style={{ color: isDarkMode ? '#fff' : noteColor }}
                 >
                   {note.title || 'Sin título'}
@@ -262,14 +303,16 @@ const NoteCard: React.FC<NoteCardProps> = ({
                     backgroundColor: `${noteColor}20`,
                     color: noteColor,
                     border: `2px solid ${noteColor}40`,
+                    backdropFilter: 'blur(4px)',
                   }}
                   aria-label="Abrir menú de opciones"
+                  title="Opciones"
                 >
                   <MoreVertical className="w-5 h-5" />
                 </motion.button>
               </div>
 
-              <p className={`text-sm line-clamp-3 mb-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+              <p className={`text-sm line-clamp-3 mb-4 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                 {note.content || 'Sin contenido'}
               </p>
 
@@ -277,10 +320,10 @@ const NoteCard: React.FC<NoteCardProps> = ({
               {renderTags()}
 
               {/* Fecha */}
-              <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-200/50 dark:border-gray-700/50">
                 <div className="flex items-center gap-1.5">
-                  <Calendar className={`w-3.5 h-3.5 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`} />
-                  <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                  <Calendar className={`w-3.5 h-3.5 ${isDarkMode ? 'text-gray-400' : 'text-gray-400'}`} />
+                  <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                     {formattedDate}
                   </span>
                 </div>
@@ -288,13 +331,14 @@ const NoteCard: React.FC<NoteCardProps> = ({
             </div>
           </>
         ) : (
-          /* VISTA LISTA */
+          /* VISTA LISTA - Color ahora tiñe toda la tarjeta */
           <div className="flex items-start p-4 w-full">
-            {/* Indicador de color */}
+            {/* Indicador de color - ahora más grande y visible */}
             <div 
-              className="w-1.5 h-16 rounded-full mr-4 flex-shrink-0"
+              className="w-2 h-16 rounded-full mr-4 flex-shrink-0 transition-all duration-300"
               style={{ 
                 background: `linear-gradient(to bottom, ${noteColor}, ${noteColor}CC)`,
+                boxShadow: `0 2px 8px ${getColorWithOpacity(noteColor, 0.4)}`,
               }}
             />
 
@@ -302,13 +346,13 @@ const NoteCard: React.FC<NoteCardProps> = ({
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-2 mb-1">
                 <h3 
-                  className={`font-semibold text-lg truncate`}
+                  className={`font-semibold text-lg truncate transition-colors duration-300`}
                   style={{ color: isDarkMode ? '#fff' : noteColor }}
                 >
                   {note.title || 'Sin título'}
                 </h3>
                 
-                {/* Botón de tres puntitos - AHORA AL FINAL */}
+                {/* Botón de tres puntitos */}
                 <motion.button
                   ref={buttonRef}
                   whileHover={{ scale: 1.1 }}
@@ -319,14 +363,16 @@ const NoteCard: React.FC<NoteCardProps> = ({
                     backgroundColor: `${noteColor}20`,
                     color: noteColor,
                     border: `2px solid ${noteColor}40`,
+                    backdropFilter: 'blur(4px)',
                   }}
                   aria-label="Abrir menú de opciones"
+                  title="Opciones"
                 >
                   <MoreVertical className="w-4 h-4" />
                 </motion.button>
               </div>
 
-              <p className={`text-sm line-clamp-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+              <p className={`text-sm line-clamp-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                 {note.content || 'Sin contenido'}
               </p>
 
@@ -335,8 +381,8 @@ const NoteCard: React.FC<NoteCardProps> = ({
 
               <div className="flex items-center justify-between mt-2">
                 <div className="flex items-center gap-1.5">
-                  <Calendar className={`w-3.5 h-3.5 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`} />
-                  <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                  <Calendar className={`w-3.5 h-3.5 ${isDarkMode ? 'text-gray-400' : 'text-gray-400'}`} />
+                  <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                     {formattedDate}
                   </span>
                 </div>
@@ -350,14 +396,31 @@ const NoteCard: React.FC<NoteCardProps> = ({
           <motion.div 
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            className="absolute top-3 left-3 w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg"
+            className="absolute top-3 left-3 w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg z-20"
           >
             <CheckCircle className="w-4 h-4 text-white" />
           </motion.div>
         )}
+
+        {/* Badge de forma (opcional - muestra qué forma tiene la nota) */}
+        {getNoteShape() !== 'rounded' && (
+          <div 
+            className="absolute bottom-3 right-3 px-2 py-1 rounded-full text-xs font-medium backdrop-blur-sm"
+            style={{
+              backgroundColor: `${noteColor}30`,
+              color: noteColor,
+              border: `1px solid ${noteColor}50`,
+            }}
+            title={`Forma: ${getNoteShape() === 'square' ? 'Cuadrado' : getNoteShape() === 'oval' ? 'Ovalado' : 'Píldora'}`}
+          >
+            {getNoteShape() === 'square' && '⬛'}
+            {getNoteShape() === 'oval' && '🥚'}
+            {getNoteShape() === 'pill' && '💊'}
+          </div>
+        )}
       </motion.div>
 
-      {/* Menú Circular Centrado - IGUAL PARA AMBAS VISTAS */}
+      {/* Menú Circular Centrado */}
       <AnimatePresence>
         {showMenu && (
           <>
@@ -380,10 +443,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
                 animate="visible"
                 exit="exit"
                 className="relative pointer-events-auto"
-                style={{ 
-                  width: menuSize, 
-                  height: menuSize,
-                }}
+                style={{ width: menuSize, height: menuSize }}
               >
                 {/* Botón central */}
                 <motion.button
@@ -427,10 +487,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
                         }
                       }}
                       exit={{ scale: 0, x: 0, y: 0 }}
-                      whileHover={{ 
-                        scale: 1.15,
-                        transition: { duration: 0.1 }
-                      }}
+                      whileHover={{ scale: 1.15 }}
                       whileTap={{ scale: 0.9 }}
                       onClick={(e) => {
                         e.stopPropagation();

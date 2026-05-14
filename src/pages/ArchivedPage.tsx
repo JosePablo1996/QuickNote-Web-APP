@@ -4,9 +4,9 @@ import { useTheme } from '../hooks/useTheme';
 import { useNotes } from '../hooks/useNotes';
 import { useToast } from '../hooks/useToast';
 import { Note } from '../models/Note';
-import LoadingSpinner from '../components/ui/LoadingSpinner';
-import EmptyState from '../components/ui/EmptyState';
-import NoteCard from '../components/notes/NoteCard';
+import LoadingSpinner from '../contexts/components/ui/LoadingSpinner';
+import EmptyState from '../contexts/components/ui/EmptyState';
+import NoteCard from '../contexts/components/notes/NoteCard';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Archive, 
@@ -49,8 +49,9 @@ const ArchivedPage: React.FC = () => {
   const [selectedNotes, setSelectedNotes] = useState<Set<string>>(new Set());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   
-  // Usar ref para controlar montaje
+  // Usar ref para controlar montaje y carga inicial
   const isMountedRef = useRef(true);
+  const initialLoadDone = useRef(false);
   const previousArchivedLength = useRef(archivedNotes.length);
 
   // Configurar ref de montaje
@@ -66,10 +67,14 @@ const ArchivedPage: React.FC = () => {
     localStorage.setItem('archived_view', viewMode);
   }, [viewMode]);
 
-  // Cargar notas archivadas al montar
+  // ✅ CORREGIDO: Cargar notas archivadas SOLO UNA VEZ al montar
   useEffect(() => {
-    loadArchivedNotes();
-  }, [loadArchivedNotes]);
+    if (!initialLoadDone.current) {
+      console.log('📦 ArchivedPage: Cargando notas archivadas...');
+      initialLoadDone.current = true;
+      loadArchivedNotes();
+    }
+  }, []); // ← Sin dependencias - evita bucle
 
   // Limpiar selección cuando cambian las notas
   useEffect(() => {
@@ -526,10 +531,7 @@ const ArchivedPage: React.FC = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    className={`
-                      relative cursor-pointer
-                      ${isSelectionMode ? 'select-none' : ''}
-                    `}
+                    className={`relative cursor-pointer ${isSelectionMode ? 'select-none' : ''}`}
                     onClick={() => isSelectionMode && toggleNoteSelection(note.id)}
                   >
                     <NoteCard
@@ -543,15 +545,12 @@ const ArchivedPage: React.FC = () => {
                       isGridMode={viewMode === 'grid'}
                     />
                     
-                    {/* Overlay de selección */}
                     {isSelectionMode && (
-                      <div 
-                        className={`absolute inset-0 rounded-xl transition-all pointer-events-none
-                          ${isSelected 
-                            ? 'ring-2 ring-teal-500 bg-teal-500/5' 
-                            : 'hover:ring-2 hover:ring-teal-500/30'
-                          }`}
-                      />
+                      <div className={`absolute inset-0 rounded-xl transition-all pointer-events-none ${
+                        isSelected 
+                          ? 'ring-2 ring-teal-500 bg-teal-500/5' 
+                          : 'hover:ring-2 hover:ring-teal-500/30'
+                      }`} />
                     )}
                   </motion.div>
                 );
@@ -618,9 +617,7 @@ const ArchivedPage: React.FC = () => {
             className="fixed top-4 right-4 z-50 bg-gradient-to-r from-teal-500 to-cyan-500 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2"
           >
             <RefreshCw className="w-4 h-4 animate-spin" />
-            <span className="text-sm font-medium">
-              Actualizando...
-            </span>
+            <span className="text-sm font-medium">Actualizando...</span>
           </motion.div>
         )}
       </AnimatePresence>

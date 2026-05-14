@@ -1,9 +1,10 @@
+// src/contexts/AuthProvider.tsx
 import React, { useState, useEffect } from 'react';
 import { User } from '../models/User';
 import { supabase } from '../services/supabase';
 import { createClient } from '@supabase/supabase-js';
 import { Session } from '@supabase/supabase-js';
-import { AuthContext } from './AuthContext';
+import { AuthContext, LoginResponse } from './AuthContext';
 import { useToast } from '../hooks/useToast';
 
 // Cliente admin con service role key para operaciones privilegiadas
@@ -20,7 +21,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isUsingJWT, setIsUsingJWT] = useState(false);
   const toast = useToast();
 
-  // Función para decodificar JWT
+  // Funcion para decodificar JWT
   const decodeJWT = (token: string): any => {
     try {
       const base64Url = token.split('.')[1];
@@ -30,20 +31,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }).join(''));
       return JSON.parse(jsonPayload);
     } catch (err) {
-      console.error('❌ Error decodificando JWT:', err);
+      console.error('Error decodificando JWT:', err);
       return null;
     }
   };
 
-  // Función para obtener URLs de los buckets
+  // Funcion para obtener URLs de los buckets
   const getUserImageUrls = async (userId: string, email: string): Promise<{ avatar: string; banner: string }> => {
-    console.log('📦 Buscando imágenes en buckets para usuario:', userId);
+    console.log('Buscando imagenes en buckets para usuario:', userId);
     
     let avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(email.split('@')[0])}&background=3B82F6&color=fff&size=200`;
     let bannerUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(email.split('@')[0])}&background=8B5CF6&color=fff&size=400&length=2`;
 
     try {
-      // Buscar avatar en el bucket
       const { data: avatarFiles, error: avatarError } = await supabaseAdmin.storage
         .from('avatars')
         .list(userId, {
@@ -56,10 +56,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .from('avatars')
           .getPublicUrl(`${userId}/${avatarFiles[0].name}`);
         avatarUrl = publicUrl;
-        console.log('✅ Avatar encontrado en bucket:', avatarUrl);
+        console.log('Avatar encontrado en bucket:', avatarUrl);
       }
 
-      // Buscar banner en el bucket
       const { data: bannerFiles, error: bannerError } = await supabaseAdmin.storage
         .from('banners')
         .list(userId, {
@@ -72,36 +71,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .from('banners')
           .getPublicUrl(`${userId}/${bannerFiles[0].name}`);
         bannerUrl = publicUrl;
-        console.log('✅ Banner encontrado en bucket:', bannerUrl);
+        console.log('Banner encontrado en bucket:', bannerUrl);
       }
     } catch (error) {
-      console.error('❌ Error obteniendo imágenes de buckets:', error);
+      console.error('Error obteniendo imagenes de buckets:', error);
     }
 
     return { avatar: avatarUrl, banner: bannerUrl };
   };
 
-  // Función para cargar usuario desde token JWT
+  // Funcion para cargar usuario desde token JWT
   const loadUserFromToken = async (token: string): Promise<boolean> => {
     try {
-      console.log('🔑 Cargando usuario desde token JWT');
+      console.log('Cargando usuario desde token JWT');
       
       const payload = decodeJWT(token);
       if (!payload || !payload.userId) {
-        console.error('❌ Token no contiene userId');
+        console.error('Token no contiene userId');
         return false;
       }
 
-      console.log('📦 Buscando usuario con ID:', payload.userId);
+      console.log('Buscando usuario con ID:', payload.userId);
 
-      // Intentar obtener usuario de Supabase con admin API
       try {
         const { data: { user: supabaseUser }, error } = await supabaseAdmin.auth.admin.getUserById(payload.userId);
         
         if (!error && supabaseUser) {
-          console.log('✅ Usuario encontrado en Supabase:', supabaseUser.email);
+          console.log('Usuario encontrado en Supabase:', supabaseUser.email);
           
-          // Obtener URLs de los buckets
           const { avatar, banner } = await getUserImageUrls(supabaseUser.id, supabaseUser.email || payload.email);
           
           const appUser: User = {
@@ -132,10 +129,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return true;
         }
       } catch (adminError) {
-        console.log('⚠️ Admin API no disponible, usando método alternativo');
+        console.log('Admin API no disponible, usando metodo alternativo');
       }
 
-      // Si no se pudo obtener de admin API, crear usuario mínimo
+      // Fallback: crear usuario mínimo con datos del token
       const { avatar, banner } = await getUserImageUrls(payload.userId, payload.email || 'usuario');
       
       const minimalUser: User = {
@@ -163,19 +160,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(minimalUser);
       localStorage.setItem('user', JSON.stringify(minimalUser));
       localStorage.setItem('auth_token', token);
-      console.log('✅ Usuario creado con URLs de buckets:', minimalUser.email);
+      console.log('Usuario creado con URLs de buckets:', minimalUser.email);
       return true;
       
     } catch (err) {
-      console.error('❌ Error cargando usuario desde token:', err);
+      console.error('Error cargando usuario desde token:', err);
       return false;
     }
   };
 
-  // Limpiar datos de sesión al cerrar sesión
+  // Limpiar datos de sesion al cerrar sesion
   const clearSessionData = () => {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('user');
+    localStorage.removeItem('refresh_token');
+    sessionStorage.removeItem('temp_2fa_token');
+    sessionStorage.removeItem('temp_user_email');
+    sessionStorage.removeItem('temp_user_name');
+    sessionStorage.removeItem('2fa_user_data');
+    sessionStorage.removeItem('login_in_progress');
   };
 
   // Verificar token existente al iniciar
@@ -183,22 +186,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const token = localStorage.getItem('auth_token');
     const storedUser = localStorage.getItem('user');
     
-    console.log('🔍 Verificando token existente:', { 
-      token: token ? 'Sí' : 'No', 
-      storedUser: storedUser ? 'Sí' : 'No' 
+    console.log('Verificando token existente:', { 
+      token: token ? 'Si' : 'No', 
+      storedUser: storedUser ? 'Si' : 'No' 
     });
     
     if (token && !user) {
+      console.log('Token JWT encontrado, cargando usuario...');
       setIsUsingJWT(true);
-      await loadUserFromToken(token);
+      const success = await loadUserFromToken(token);
       setIsUsingJWT(false);
-    } else if (storedUser && !user) {
+      
+      if (success) {
+        console.log('Usuario cargado desde token JWT');
+        return;
+      }
+    }
+    
+    if (storedUser && !user) {
       try {
         const parsedUser = JSON.parse(storedUser);
         setUser(parsedUser);
-        console.log('✅ Usuario restaurado desde localStorage:', parsedUser.email);
+        console.log('Usuario restaurado desde localStorage:', parsedUser.email);
       } catch (err) {
-        console.error('❌ Error restaurando usuario:', err);
+        console.error('Error restaurando usuario:', err);
         clearSessionData();
       }
     }
@@ -207,7 +218,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const mapSupabaseUserToAppUser = async (supabaseUser: any): Promise<User> => {
     const { avatar, banner } = await getUserImageUrls(supabaseUser.id, supabaseUser.email);
     
-    console.log('🔄 Mapeando usuario:', {
+    console.log('Mapeando usuario:', {
       id: supabaseUser.id,
       email: supabaseUser.email,
       avatar: avatar,
@@ -238,32 +249,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   };
 
+  // useEffect principal
   useEffect(() => {
     checkExistingToken();
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
-      console.log('📥 Sesión Supabase:', session?.user?.email || 'No hay sesión');
+      console.log('Sesion Supabase:', session?.user?.email || 'No hay sesion');
       setSession(session);
       
-      if (session?.user && !isUsingJWT && !user) {
+      const token = localStorage.getItem('auth_token');
+      const temp2faToken = sessionStorage.getItem('temp_2fa_token');
+      
+      if (session?.user && !isUsingJWT && !user && !token && !temp2faToken) {
+        console.log('Cargando usuario desde sesion Supabase...');
         const appUser = await mapSupabaseUserToAppUser(session.user);
         setUser(appUser);
         localStorage.setItem('user', JSON.stringify(appUser));
         
-        // ✅ Guardar token de Supabase como auth_token
         if (session.access_token) {
           localStorage.setItem('auth_token', session.access_token);
-          console.log('🔑 Token guardado desde sesión Supabase');
+          console.log('Token guardado desde sesion Supabase');
         }
       }
-      setIsLoading(false);
+      
+      if (!isUsingJWT) {
+        setIsLoading(false);
+      }
     });
 
+    // onAuthStateChange - Solo para cambios de sesión normales
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      console.log('🔄 Cambio en autenticación Supabase:', _event, session?.user?.email);
+      console.log('Cambio en autenticacion Supabase:', _event, session?.user?.email);
       setSession(session);
       
       const token = localStorage.getItem('auth_token');
+      const temp2faToken = sessionStorage.getItem('temp_2fa_token');
+      
+      // Si hay flujo 2FA, ignorar
+      if (temp2faToken) {
+        console.log('Flujo 2FA en progreso, ignorando cambio de sesión Supabase');
+        return;
+      }
       
       if (!isUsingJWT && !token) {
         if (session?.user) {
@@ -271,10 +297,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(appUser);
           localStorage.setItem('user', JSON.stringify(appUser));
           
-          // ✅ Guardar token cuando cambia la sesión
           if (session.access_token) {
             localStorage.setItem('auth_token', session.access_token);
-            console.log('🔑 Token actualizado por cambio de sesión');
+            console.log('Token actualizado por cambio de sesion');
           }
         } else {
           setUser(null);
@@ -286,116 +311,190 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, [isUsingJWT]);
 
-  // ✅ CORREGIDO: login con email ahora guarda el token
-  const login = async (email: string, password: string): Promise<boolean> => {
+  // ============================================
+  // FUNCION LOGIN
+  // ============================================
+  const login = async (email: string, password: string): Promise<LoginResponse> => {
     setIsLoading(true);
     setError(null);
     
     try {
-      console.log('🔐 Iniciando sesión con email:', email);
+      console.log('Iniciando sesion con email:', email);
+      console.log('Llamando a POST /api/v1/auth/login');
       
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const response = await fetch('/api/v1/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password })
       });
 
-      if (error) throw error;
-
-      // ✅ Guardar token de Supabase
-      if (data.session) {
-        localStorage.setItem('auth_token', data.session.access_token);
-        console.log('🔑 Token guardado:', data.session.access_token.substring(0, 20) + '...');
-        
-        if (data.user) {
-          localStorage.setItem('user', JSON.stringify(data.user));
-        }
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Error al iniciar sesión');
       }
 
-      console.log('✅ Login exitoso');
-      toast.success('¡Bienvenido de vuelta!');
-      return true;
+      const loginData = await response.json();
+      console.log('Respuesta del backend:', {
+        success: loginData.success,
+        requires_2fa: loginData.requires_2fa,
+        has_token: !!loginData.access_token,
+        has_temp_token: !!loginData.temp_token,
+        has_user: !!loginData.user
+      });
+
+      if (loginData.requires_2fa === true) {
+        console.log('2FA requerido para este usuario');
+        return {
+          success: true,
+          requires2FA: true,
+          tempToken: loginData.temp_token || loginData.user_id || '',
+          message: loginData.message || 'Se requiere verificación 2FA',
+          user: loginData.user || null
+        };
+      }
+
+      if (loginData.access_token) {
+        console.log('Login exitoso (sin 2FA), guardando token');
+        
+        localStorage.setItem('auth_token', loginData.access_token);
+        
+        if (loginData.refresh_token) {
+          localStorage.setItem('refresh_token', loginData.refresh_token);
+        }
+
+        if (loginData.user) {
+          const { avatar, banner } = await getUserImageUrls(
+            loginData.user.id, 
+            loginData.user.email || email
+          );
+          
+          const appUser: User = {
+            id: loginData.user.id,
+            email: loginData.user.email || email,
+            name: loginData.user.full_name || loginData.user.username || email.split('@')[0],
+            avatar: loginData.user.avatar || avatar,
+            banner: banner,
+            role: 'user',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            is_active: true,
+            settings: {
+              theme: 'system',
+              language: 'es',
+              notifications: true,
+              default_note_color: '#3B82F6',
+              auto_save: true,
+              default_view: 'grid',
+              sort_by: 'created_at',
+              sort_order: 'desc',
+            },
+          };
+          
+          setUser(appUser);
+          localStorage.setItem('user', JSON.stringify(appUser));
+          console.log('Usuario guardado:', appUser.email);
+        }
+
+        toast.success('¡Bienvenido de vuelta!');
+        return {
+          success: true,
+          requires2FA: false,
+          access_token: loginData.access_token,
+          user: loginData.user
+        };
+      }
+
+      throw new Error('Respuesta inesperada del servidor: no se recibió token ni requerimiento 2FA');
       
     } catch (err) {
-      console.error('❌ Error en login:', err);
-      const message = err instanceof Error ? err.message : 'Error al iniciar sesión';
+      console.error('Error en login:', err);
+      const message = err instanceof Error ? err.message : 'Error al iniciar sesion';
       setError(message);
       toast.error(message);
-      return false;
+      return {
+        success: false,
+        requires2FA: false
+      };
     } finally {
       setIsLoading(false);
     }
   };
 
-  // ✅ MEJORADO: loginWithPasskey
+  // ============================================
+  // LOGIN CON PASSKEY
+  // ============================================
   const loginWithPasskey = async (email: string, credential: any): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
     
     try {
-      console.log('🔐 Iniciando sesión con passkey para:', email);
+      console.log('Iniciando sesion con passkey para:', email);
       
-      const response = await fetch('/api/passkey/auth/verify', {
+      const response = await fetch('/api/v1/passkeys/login/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, ...credential }),
+        body: JSON.stringify({ 
+          email, 
+          credential: {
+            ...credential,
+            challenge_id: credential.challenge_id
+          }
+        }),
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Error en autenticación con passkey');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Error en autenticacion con passkey');
       }
 
       const data = await response.json();
       
-      if (data.verified && data.token) {
-        // Guardar token
-        localStorage.setItem('auth_token', data.token);
-        console.log('🔑 Token guardado desde passkey:', data.token.substring(0, 20) + '...');
+      if (data.access_token) {
+        localStorage.setItem('auth_token', data.access_token);
+        console.log('Token guardado desde passkey:', data.access_token.substring(0, 20) + '...');
         
-        // Guardar usuario
         if (data.user) {
           localStorage.setItem('user', JSON.stringify(data.user));
         }
         
-        // Usar loginWithToken para cargar el usuario
-        const success = await loginWithToken(data.token);
+        const success = await loginWithToken(data.access_token);
         
         if (success) {
-          console.log('✅ Login con passkey exitoso');
-          toast.success('¡Autenticación biométrica exitosa!');
+          console.log('Login con passkey exitoso');
+          toast.success('Autenticacion biometrica exitosa!');
           return true;
         }
       }
       
-      throw new Error('No se pudo completar la autenticación');
+      throw new Error('No se pudo completar la autenticacion');
       
     } catch (err) {
-      console.error('❌ Error en loginWithPasskey:', err);
-      const message = err instanceof Error ? err.message : 'Error en autenticación biométrica';
+      console.error('Error en loginWithPasskey:', err);
+      const message = err instanceof Error ? err.message : 'Error en autenticacion biometrica';
       setError(message);
       toast.error(message);
-      
-      // Limpiar datos si hay error
       clearSessionData();
-      
       return false;
     } finally {
       setIsLoading(false);
     }
   };
 
-  // ✅ FUNCIÓN MEJORADA: loginWithToken
+  // ============================================
+  // LOGIN CON TOKEN JWT
+  // ============================================
   const loginWithToken = async (token: string): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
     setIsUsingJWT(true);
     
     try {
-      console.log('🔐 Iniciando sesión con token JWT');
+      console.log('Iniciando sesion con token JWT');
       
-      if (!token) throw new Error('Token vacío');
+      if (!token) throw new Error('Token vacio');
       
-      // Guardar token primero
       localStorage.setItem('auth_token', token);
       
       const successResult = await loadUserFromToken(token);
@@ -405,18 +504,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('No se pudo cargar el usuario desde el token');
       }
       
-      console.log('✅ Login con token exitoso');
+      console.log('Login con token exitoso');
       return true;
       
     } catch (err) {
-      console.error('❌ Error en loginWithToken:', err);
-      const message = err instanceof Error ? err.message : 'Error al iniciar sesión con token';
+      console.error('Error en loginWithToken:', err);
+      const message = err instanceof Error ? err.message : 'Error al iniciar sesion con token';
       setError(message);
       toast.error(message);
-      
       clearSessionData();
       setUser(null);
-      
       return false;
     } finally {
       setIsUsingJWT(false);
@@ -424,32 +521,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // ✅ Función para refrescar token
-  const refreshToken = async (): Promise<boolean> => {
-    try {
-      console.log('🔄 Refrescando token...');
-      const { data, error } = await supabase.auth.refreshSession();
-      
-      if (error) throw error;
-      
-      if (data.session) {
-        localStorage.setItem('auth_token', data.session.access_token);
-        console.log('✅ Token refrescado');
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error('❌ Error refrescando token:', error);
-      return false;
-    }
-  };
-
+  // ============================================
+  // REGISTRO
+  // ============================================
   const register = async (email: string, password: string, name: string): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
     
     try {
-      console.log('📝 Registrando usuario:', email);
+      console.log('Registrando usuario:', email);
       
       const { error } = await supabase.auth.signUp({
         email,
@@ -463,12 +543,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) throw error;
 
-      console.log('✅ Usuario creado');
-      toast.success('¡Registro exitoso! Revisa tu correo para confirmar la cuenta.');
+      console.log('Usuario creado');
+      toast.success('Registro exitoso! Revisa tu correo para confirmar la cuenta.');
       return true;
       
     } catch (err) {
-      console.error('❌ Error en registro:', err);
+      console.error('Error en registro:', err);
       const message = err instanceof Error ? err.message : 'Error al registrarse';
       setError(message);
       toast.error(message);
@@ -478,14 +558,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // ============================================
+  // REGISTRO CON PASSKEY
+  // ============================================
   const registerWithPasskey = async (email: string, name: string): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
     
     try {
-      console.log('🔐 Registrando passkey para:', email);
+      console.log('Registrando passkey para:', email);
       
-      // Primero verificar si el usuario existe
       const { data: { users }, error: userError } = await supabaseAdmin.auth.admin.listUsers();
       
       if (userError) throw userError;
@@ -494,7 +576,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       let existingUser = users.find((u: any) => u.email === email);
       
       if (!existingUser) {
-        // Crear usuario temporal sin contraseña
         const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
           email,
           email_confirm: true,
@@ -505,14 +586,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!newUser.user) throw new Error('No se pudo crear el usuario');
         
         userId = newUser.user.id;
-        console.log('✅ Usuario creado para passkey:', userId);
+        console.log('Usuario creado para passkey:', userId);
       } else {
         userId = existingUser.id;
-        console.log('✅ Usuario existente encontrado:', userId);
+        console.log('Usuario existente encontrado:', userId);
       }
       
-      // Ahora registrar la passkey
-      const response = await fetch('/api/passkey/register/verify', {
+      const response = await fetch('/api/v1/passkeys/register/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, name, userId }),
@@ -520,14 +600,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Error en registro de passkey');
+        throw new Error(error.detail || 'Error en registro de passkey');
       }
 
-      toast.success('¡Passkey registrada exitosamente!');
+      toast.success('Passkey registrada exitosamente!');
       return true;
       
     } catch (err) {
-      console.error('❌ Error en registerWithPasskey:', err);
+      console.error('Error en registerWithPasskey:', err);
       const message = err instanceof Error ? err.message : 'Error al registrar passkey';
       setError(message);
       toast.error(message);
@@ -537,12 +617,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // ============================================
+  // RESET PASSWORD (enviar correo)
+  // ============================================
   const resetPassword = async (email: string): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
     
     try {
-      console.log('📧 Enviando correo de recuperación a:', email);
+      console.log('Enviando correo de recuperacion a:', email);
       
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
@@ -550,13 +633,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) throw error;
       
-      console.log('✅ Correo de recuperación enviado');
-      toast.success('Correo de recuperación enviado. Revisa tu bandeja de entrada.');
+      console.log('Correo de recuperacion enviado');
+      toast.success('Correo de recuperacion enviado. Revisa tu bandeja de entrada.');
       return true;
       
     } catch (err) {
-      console.error('❌ Error al enviar correo de recuperación:', err);
-      const message = err instanceof Error ? err.message : 'Error al enviar correo de recuperación';
+      console.error('Error al enviar correo de recuperacion:', err);
+      const message = err instanceof Error ? err.message : 'Error al enviar correo de recuperacion';
       setError(message);
       toast.error(message);
       return false;
@@ -565,12 +648,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // ============================================
+  // UPDATE PASSWORD (desde enlace de recuperación)
+  // ============================================
   const updatePassword = async (newPassword: string): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
     
     try {
-      console.log('🔐 Actualizando contraseña...');
+      console.log('Actualizando contrasena...');
       
       const { error } = await supabase.auth.updateUser({
         password: newPassword
@@ -578,13 +664,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) throw error;
       
-      console.log('✅ Contraseña actualizada correctamente');
-      toast.success('Contraseña actualizada correctamente');
+      console.log('Contrasena actualizada correctamente');
+      toast.success('Contrasena actualizada correctamente');
       return true;
       
     } catch (err) {
-      console.error('❌ Error al actualizar contraseña:', err);
-      const message = err instanceof Error ? err.message : 'Error al actualizar contraseña';
+      console.error('Error al actualizar contrasena:', err);
+      const message = err instanceof Error ? err.message : 'Error al actualizar contrasena';
       setError(message);
       toast.error(message);
       return false;
@@ -593,13 +679,98 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // ✅ MEJORADO: logout
+  // ============================================
+  // CHANGE PASSWORD (con sesión activa)
+  // ============================================
+  const changePassword = async (currentPassword: string, newPassword: string): Promise<{
+    success: boolean;
+    message: string;
+    requires_relogin: boolean;
+  }> => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const token = localStorage.getItem('auth_token');
+      
+      if (!token) {
+        throw new Error('No hay sesión activa');
+      }
+      
+      console.log('Cambiando contraseña para usuario:', user?.email);
+      
+      const response = await fetch('/api/v1/auth/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          current_password: currentPassword,
+          new_password: newPassword
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        console.log('Contraseña cambiada exitosamente');
+        
+        if (data.requires_relogin) {
+          console.log('Cerrando sesión por cambio de contraseña');
+          
+          // Limpiar todos los datos de sesión
+          clearSessionData();
+          setUser(null);
+          setSession(null);
+          
+          toast.success(data.message || 'Contraseña actualizada. Por favor, inicia sesión nuevamente.');
+        } else {
+          toast.success(data.message || 'Contraseña actualizada correctamente');
+        }
+        
+        return {
+          success: true,
+          message: data.message || 'Contraseña actualizada correctamente',
+          requires_relogin: data.requires_relogin || false
+        };
+      } else {
+        const errorMsg = data.detail?.message || data.message || data.detail || 'Error al cambiar la contraseña';
+        console.error('Error cambiando contraseña:', errorMsg);
+        setError(errorMsg);
+        toast.error(errorMsg);
+        
+        return {
+          success: false,
+          message: errorMsg,
+          requires_relogin: false
+        };
+      }
+      
+    } catch (err) {
+      console.error('Error en changePassword:', err);
+      const message = err instanceof Error ? err.message : 'Error al cambiar la contraseña';
+      setError(message);
+      toast.error(message);
+      
+      return {
+        success: false,
+        message: message,
+        requires_relogin: false
+      };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ============================================
+  // LOGOUT
+  // ============================================
   const logout = async (): Promise<void> => {
     setIsLoading(true);
     try {
-      console.log('🚪 Cerrando sesión');
+      console.log('Cerrando sesion');
       
-      // Limpiar datos de sesión
       clearSessionData();
       
       const { error } = await supabase.auth.signOut();
@@ -608,24 +779,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(null);
       setSession(null);
       
-      console.log('✅ Sesión cerrada');
-      toast.info('Sesión cerrada correctamente');
+      console.log('Sesion cerrada');
+      toast.info('Sesion cerrada correctamente');
       
     } catch (err) {
-      console.error('❌ Error al cerrar sesión:', err);
-      toast.error('Error al cerrar sesión');
+      console.error('Error al cerrar sesion:', err);
+      toast.error('Error al cerrar sesion');
     } finally {
       setIsLoading(false);
     }
   };
 
+  // ============================================
+  // UPDATE PROFILE
+  // ============================================
   const updateProfile = async (data: Partial<User>): Promise<boolean> => {
     if (!user) {
-      console.log('❌ No hay usuario autenticado');
+      console.log('No hay usuario autenticado');
       return false;
     }
     
-    console.log('📝 Actualizando perfil con:', data);
+    console.log('Actualizando perfil con:', data);
     
     setIsLoading(true);
     setError(null);
@@ -646,18 +820,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
 
         if (error) {
-          console.error('❌ Error en updateUser:', error);
+          console.error('Error en updateUser:', error);
         }
       } catch (metaError) {
-        console.log('⚠️ No se pudo actualizar metadata en Supabase');
+        console.log('No se pudo actualizar metadata en Supabase');
       }
       
-      console.log('✅ Perfil actualizado correctamente');
+      console.log('Perfil actualizado correctamente');
       toast.success('Perfil actualizado correctamente');
       return true;
       
     } catch (err) {
-      console.error('❌ Error en updateProfile:', err);
+      console.error('Error en updateProfile:', err);
       const message = err instanceof Error ? err.message : 'Error al actualizar perfil';
       setError(message);
       toast.error(message);
@@ -667,13 +841,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // ============================================
+  // UPLOAD AVATAR
+  // ============================================
   const uploadAvatar = async (file: File): Promise<string | null> => {
     if (!user) {
-      console.log('❌ No hay usuario autenticado');
+      console.log('No hay usuario autenticado');
       return null;
     }
     
-    console.log('📤 Subiendo avatar...', {
+    console.log('Subiendo avatar...', {
       userId: user.id,
       fileName: file.name,
       fileSize: file.size
@@ -682,7 +859,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}/avatar-${Date.now()}.${fileExt}`;
-      console.log('📝 Nombre del archivo:', fileName);
+      console.log('Nombre del archivo:', fileName);
       
       const { error } = await supabaseAdmin.storage
         .from('avatars')
@@ -692,7 +869,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
 
       if (error) {
-        console.error('❌ Error al subir avatar:', error);
+        console.error('Error al subir avatar:', error);
         throw error;
       }
 
@@ -700,32 +877,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from('avatars')
         .getPublicUrl(fileName);
       
-      console.log('🔗 URL pública:', publicUrl);
+      console.log('URL publica:', publicUrl);
 
       const updated = await updateProfile({ avatar: publicUrl });
       
       if (updated) {
-        console.log('✅ Perfil actualizado con nueva URL de avatar');
+        console.log('Perfil actualizado con nueva URL de avatar');
         toast.success('Avatar actualizado correctamente');
         return publicUrl;
       } else {
-        console.log('❌ Error al actualizar perfil');
+        console.log('Error al actualizar perfil');
         return null;
       }
     } catch (err) {
-      console.error('❌ Error en uploadAvatar:', err);
+      console.error('Error en uploadAvatar:', err);
       toast.error('Error al subir avatar');
       return null;
     }
   };
 
+  // ============================================
+  // UPLOAD BANNER
+  // ============================================
   const uploadBanner = async (file: File): Promise<string | null> => {
     if (!user) {
-      console.log('❌ No hay usuario autenticado');
+      console.log('No hay usuario autenticado');
       return null;
     }
     
-    console.log('📤 Subiendo banner...', {
+    console.log('Subiendo banner...', {
       userId: user.id,
       fileName: file.name,
       fileSize: file.size
@@ -734,7 +914,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}/banner-${Date.now()}.${fileExt}`;
-      console.log('📝 Nombre del archivo:', fileName);
+      console.log('Nombre del archivo:', fileName);
       
       const { error } = await supabaseAdmin.storage
         .from('banners')
@@ -744,7 +924,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
 
       if (error) {
-        console.error('❌ Error al subir banner:', error);
+        console.error('Error al subir banner:', error);
         throw error;
       }
 
@@ -752,30 +932,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from('banners')
         .getPublicUrl(fileName);
       
-      console.log('🔗 URL pública:', publicUrl);
+      console.log('URL publica:', publicUrl);
 
       const updated = await updateProfile({ banner: publicUrl });
       
       if (updated) {
-        console.log('✅ Perfil actualizado con nueva URL de banner');
+        console.log('Perfil actualizado con nueva URL de banner');
         toast.success('Banner actualizado correctamente');
         return publicUrl;
       } else {
-        console.log('❌ Error al actualizar perfil');
+        console.log('Error al actualizar perfil');
         return null;
       }
     } catch (err) {
-      console.error('❌ Error en uploadBanner:', err);
+      console.error('Error en uploadBanner:', err);
       toast.error('Error al subir banner');
       return null;
     }
   };
 
-  // Función para obtener el token actual
-  const getToken = (): string | null => {
-    return localStorage.getItem('auth_token');
-  };
-
+  // ============================================
+  // VALOR DEL CONTEXTO
+  // ============================================
   const value = {
     user,
     session,
@@ -792,9 +970,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isAuthenticated: !!user,
     resetPassword,
     updatePassword,
+    changePassword,
     loginWithToken,
-    getToken,
-    refreshToken,
   };
 
   return (

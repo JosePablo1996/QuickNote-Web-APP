@@ -3,13 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../hooks/useTheme';
 import { useNotes } from '../hooks/useNotes';
 import { SortOption, sortOptions } from '../utils/sortUtils';
-import Header from '../components/layout/Header';
-import LeftMenu from '../components/layout/LeftMenu';
-import RightMenu from '../components/layout/RightMenu';
-import ConnectionStatus from '../components/layout/ConnectionStatus';
-import NoteCard from '../components/notes/NoteCard';
-import EmptyState from '../components/ui/EmptyState';
-import LoadingSpinner from '../components/ui/LoadingSpinner';
+import Header from '../contexts/components/layout/Header';
+import LeftMenu from '../contexts/components/layout/LeftMenu';
+import RightMenu from '../contexts/components/layout/RightMenu';
+import ConnectionStatus from '../contexts/components/layout/ConnectionStatus';
+import NoteCard from '../contexts/components/notes/NoteCard';
+import EmptyState from '../contexts/components/ui/EmptyState';
+import LoadingSpinner from '../contexts/components/ui/LoadingSpinner';
+import ViewToggle from '../contexts/components/ui/ViewToggle';
 import { useToast } from '../hooks/useToast';
 import { Note } from '../models/Note';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -22,14 +23,14 @@ import {
   Trash2,
   RefreshCw,
   MoreVertical
-} from 'lucide-react'; // Eliminados Grid3x3, Rows, Archive, Star, Upload que no se usan
+} from 'lucide-react';
+import ExportButton from '../contexts/components/export/ExportButton';
 
 const NotesPage: React.FC = () => {
   const navigate = useNavigate();
-  const { isDarkMode } = useTheme(); // Esto se usa en las clases CSS
   const { info, success, error: showError } = useToast();
   
-  // Usar refs para controlar cargas iniciales y montaje
+  // Refs para controlar cargas
   const initialLoadRef = useRef(false);
   const isMountedRef = useRef(true);
   
@@ -83,20 +84,19 @@ const NotesPage: React.FC = () => {
     };
   }, []);
 
-  // Cargar notas al montar SOLO UNA VEZ
+  // Cargar notas SOLO UNA VEZ al montar
   useEffect(() => {
     if (!initialLoadRef.current) {
       console.log('📝 NotesPage montado, cargando notas por primera vez...');
       initialLoadRef.current = true;
       loadNotes();
     }
-  }, [loadNotes]);
+  }, []);
 
   // Filtrar notas activas (no archivadas, no eliminadas)
   useEffect(() => {
     if (isMountedRef.current) {
       const active = notes.filter(note => !note.is_archived && !note.deleted_at);
-      console.log('📝 Notas activas:', active.length);
       setActiveNotes(active);
     }
   }, [notes]);
@@ -202,7 +202,6 @@ const NotesPage: React.FC = () => {
 
   // Función para importar notas
   const importNotes = useCallback(async (file: File): Promise<void> => {
-    // Simular importación
     console.log('Importando archivo:', file.name);
     return new Promise((resolve) => {
       setTimeout(() => {
@@ -310,12 +309,6 @@ const NotesPage: React.FC = () => {
 
   const handleToggleFavorite = async (id: string) => {
     await toggleFavorite(id);
-  };
-
-  const handleViewList = () => {
-    setCurrentView(prev => prev === 'grid' ? 'list' : 'grid');
-    info(`Cambiado a vista ${currentView === 'grid' ? 'lista' : 'grid'}`);
-    setShowRightMenu(false);
   };
 
   const handleSync = async () => {
@@ -441,7 +434,6 @@ const NotesPage: React.FC = () => {
           setShowRightMenu(false);
           setShowSortMenu(false);
         }}
-        onViewList={handleViewList}
         onSync={handleSync}
         onImport={handleImport}
       />
@@ -465,6 +457,7 @@ const NotesPage: React.FC = () => {
       {/* Barra de búsqueda y controles */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className="flex gap-2 items-center relative sort-menu-container">
+          {/* Input de búsqueda */}
           <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
@@ -478,6 +471,7 @@ const NotesPage: React.FC = () => {
               <motion.button
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
+                exit={{ scale: 0 }}
                 onClick={() => setSearchQuery('')}
                 className="absolute right-4 top-1/2 transform -translate-y-1/2 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               >
@@ -496,7 +490,11 @@ const NotesPage: React.FC = () => {
             >
               <ChevronDown className="w-5 h-5 text-gray-600 dark:text-gray-400" />
               {currentSortOption !== 'newest' && (
-                <span className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                <motion.span
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full"
+                />
               )}
             </motion.button>
 
@@ -507,6 +505,7 @@ const NotesPage: React.FC = () => {
                   initial={{ opacity: 0, scale: 0.95, y: -10 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                  transition={{ duration: 0.2 }}
                   className="absolute right-0 mt-2 w-64 bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-xl shadow-2xl border border-white/30 dark:border-gray-700/30 overflow-hidden z-50"
                 >
                   <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-4 py-3">
@@ -521,17 +520,20 @@ const NotesPage: React.FC = () => {
                           setCurrentSortOption(key as SortOption);
                           setShowSortMenu(false);
                         }}
-                        className={`
-                          w-full px-4 py-3 rounded-lg text-left transition-all flex items-center justify-between
-                          ${currentSortOption === key 
+                        className={`w-full px-4 py-3 rounded-lg text-left transition-all flex items-center justify-between ${
+                          currentSortOption === key 
                             ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium' 
                             : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-                          }
-                        `}
+                        }`}
                       >
                         <span className="text-sm">{label}</span>
                         {currentSortOption === key && (
-                          <Check className="w-4 h-4" />
+                          <motion.div
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                          >
+                            <Check className="w-4 h-4" />
+                          </motion.div>
                         )}
                       </motion.button>
                     ))}
@@ -540,6 +542,16 @@ const NotesPage: React.FC = () => {
               )}
             </AnimatePresence>
           </div>
+
+          {/* Componente ViewToggle para cambiar entre Grid y Lista */}
+          <ViewToggle
+            viewMode={currentView}
+            onViewChange={setCurrentView}
+            showLabel={false}
+          />
+
+          {/* Botón de exportación */}
+          <ExportButton variant="secondary" size="md" selectedNoteIds={Array.from(selectedNotes)} />
         </div>
       </div>
 
@@ -550,41 +562,51 @@ const NotesPage: React.FC = () => {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
             className="sticky top-0 z-40 bg-gradient-to-r from-blue-500 to-purple-600 text-white"
           >
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
-              <span className="font-medium flex items-center gap-2">
+              <motion.span 
+                initial={{ scale: 0.9 }}
+                animate={{ scale: 1 }}
+                className="font-medium flex items-center gap-2"
+              >
                 <Check className="w-5 h-5" />
                 {selectedCount} nota{selectedCount !== 1 ? 's' : ''} seleccionada{selectedCount !== 1 ? 's' : ''}
-              </span>
+              </motion.span>
               <div className="flex gap-2">
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={toggleSelectAll}
                   className="px-4 py-1.5 bg-white/20 rounded-lg hover:bg-white/30 transition-colors text-sm font-medium"
                 >
                   {selectedCount === displayNotes.length ? 'Deseleccionar todo' : 'Seleccionar todo'}
-                </button>
-                <button
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={clearSelection}
                   className="px-4 py-1.5 bg-white/20 rounded-lg hover:bg-white/30 transition-colors text-sm font-medium"
                 >
                   Cancelar
-                </button>
+                </motion.button>
               </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Lista de notas */}
+      {/* Lista de notas con transición suave entre vistas */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <AnimatePresence mode="wait">
           {displayNotes.length === 0 ? (
             <motion.div
               key="empty"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.3 }}
             >
               <EmptyState
                 type="notes"
@@ -594,10 +616,11 @@ const NotesPage: React.FC = () => {
             </motion.div>
           ) : (
             <motion.div
-              key="notes"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              key={`${currentView}-${displayNotes.length}`}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.3 }}
               className={
                 currentView === 'grid' 
                   ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'
@@ -609,7 +632,10 @@ const NotesPage: React.FC = () => {
                   key={note.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
+                  transition={{ delay: index * 0.03, duration: 0.3 }}
+                  layout
+                  layoutId={`note-${note.id}`}
+                  className={currentView === 'list' ? 'w-full' : ''}
                 >
                   <NoteCard
                     note={note}
@@ -636,6 +662,7 @@ const NotesPage: React.FC = () => {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.2 }}
               className="absolute bottom-20 right-0 w-64 bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/30 dark:border-gray-700/30 overflow-hidden"
             >
               <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-4 py-3">
@@ -646,9 +673,9 @@ const NotesPage: React.FC = () => {
               </div>
 
               <div className="p-2">
-                {/* Opción Crear nota */}
                 <motion.button
-                  whileHover={{ x: 5 }}
+                  whileHover={{ x: 5, scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={handleCreateNote}
                   className="w-full px-4 py-3 rounded-xl flex items-center gap-3 transition-all hover:bg-gray-100 dark:hover:bg-gray-700 group"
                 >
@@ -660,9 +687,9 @@ const NotesPage: React.FC = () => {
                   </span>
                 </motion.button>
 
-                {/* Opción Seleccionar múltiple */}
                 <motion.button
-                  whileHover={{ x: 5 }}
+                  whileHover={{ x: 5, scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => {
                     setIsSelectionMode(true);
                     setIsFabMenuOpen(false);
@@ -677,10 +704,10 @@ const NotesPage: React.FC = () => {
                   </span>
                 </motion.button>
 
-                {/* Opción Eliminar seleccionadas */}
                 {selectedNotes.size > 0 && (
                   <motion.button
-                    whileHover={{ x: 5 }}
+                    whileHover={{ x: 5, scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={handleDeleteMultipleNotes}
                     disabled={isDeletingMultiple}
                     className="w-full px-4 py-3 rounded-xl flex items-center gap-3 transition-all hover:bg-red-50 dark:hover:bg-red-900/20 group disabled:opacity-50"
@@ -716,9 +743,19 @@ const NotesPage: React.FC = () => {
           className="w-14 h-14 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-full shadow-2xl hover:shadow-3xl flex items-center justify-center relative disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSyncing ? (
-            <RefreshCw className="w-6 h-6 animate-spin" />
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            >
+              <RefreshCw className="w-6 h-6" />
+            </motion.div>
           ) : (
-            <Plus className={`w-6 h-6 transition-transform duration-300 ${isFabMenuOpen ? 'rotate-45' : ''}`} />
+            <motion.div
+              animate={{ rotate: isFabMenuOpen ? 45 : 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Plus className="w-6 h-6" />
+            </motion.div>
           )}
         </motion.button>
       </div>
@@ -730,12 +767,16 @@ const NotesPage: React.FC = () => {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.2 }}
             className="fixed top-4 right-4 z-50 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2"
           >
-            <RefreshCw className="w-4 h-4 animate-spin" />
-            <span className="text-sm font-medium">
-              Sincronizando...
-            </span>
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            >
+              <RefreshCw className="w-4 h-4" />
+            </motion.div>
+            <span className="text-sm font-medium">Sincronizando...</span>
           </motion.div>
         )}
       </AnimatePresence>

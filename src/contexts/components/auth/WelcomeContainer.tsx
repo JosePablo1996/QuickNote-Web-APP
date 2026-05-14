@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import WelcomeScreen from './WelcomeScreen';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth } from "../../../hooks/useAuth";
 import { Loader2, AlertCircle } from 'lucide-react';
 
 interface WelcomeContainerProps {
@@ -117,47 +117,30 @@ export const WelcomeContainer: React.FC<WelcomeContainerProps> = ({
     return 'Usuario';
   };
 
-  // Función para obtener el email
-  const getEmail = (): string => {
-    return user?.email || 'usuario@quicknote.app';
-  };
-
-  // Función para obtener el avatar (opcional)
-  const getAvatar = (): string | undefined => {
-    if (user?.user_metadata?.avatar_url) {
-      return user.user_metadata.avatar_url;
-    }
-    return undefined;
-  };
-
   // Manejar finalización de bienvenida
   const handleWelcomeComplete = () => {
     console.log('🎉 Bienvenida completada');
     
     if (onComplete) {
       onComplete();
+    } else {
+      navigate(redirectTo, { replace: true });
     }
-    
-    navigate(redirectTo, { replace: true });
-  };
-
-  // Manejar cierre de sesión
-  const handleLogout = () => {
-    console.log('🚪 Cerrando sesión desde WelcomeContainer');
-    
-    // Limpiar todo
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('refresh_token');
-    
-    // Redirigir al login
-    navigate('/login', { replace: true });
   };
 
   // Manejar reintento manual
   const handleRetry = () => {
     console.log('🔄 Reintentando verificación');
     window.location.reload();
+  };
+
+  // Manejar cierre de sesión (redirigir al login)
+  const handleGoToLogin = () => {
+    console.log('🚪 Redirigiendo al login');
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('refresh_token');
+    navigate('/login', { replace: true });
   };
 
   // Si hay error, mostrar pantalla de error
@@ -187,7 +170,7 @@ export const WelcomeContainer: React.FC<WelcomeContainerProps> = ({
               </button>
               
               <button
-                onClick={handleLogout}
+                onClick={handleGoToLogin}
                 className="w-full bg-transparent border-2 border-white text-white hover:bg-white/10 font-bold py-3 px-4 rounded-xl transition-colors"
               >
                 Volver al Login
@@ -228,25 +211,15 @@ export const WelcomeContainer: React.FC<WelcomeContainerProps> = ({
     return null;
   }
 
-  // Preparar datos del usuario para WelcomeScreen
-  const userData = {
-    name: getDisplayName(),
-    email: getEmail(),
-    avatar: getAvatar(),
-  };
+  console.log('🎨 Renderizando WelcomeScreen con usuario:', getDisplayName());
 
-  console.log('🎨 Renderizando WelcomeScreen con usuario:', userData);
-
-  // Mostrar pantalla de bienvenida
+  // Mostrar pantalla de bienvenida - Solo con las props que acepta WelcomeScreen
   return (
     <WelcomeScreen
-      userName={userData.name}
-      userEmail={userData.email}
-      userAvatar={userData.avatar}
+      userName={getDisplayName()}
       onComplete={handleWelcomeComplete}
       autoRedirect={autoRedirect}
       redirectDelay={redirectDelay}
-      onLogout={handleLogout}
     />
   );
 };
