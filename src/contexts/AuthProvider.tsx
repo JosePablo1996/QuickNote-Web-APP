@@ -26,7 +26,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return import.meta.env.VITE_API_URL || 'https://quicknote-api-app-react.onrender.com';
   };
 
-  // Funcion para decodificar JWT
+  // Detectar si estamos en desarrollo
+  const isDevelopment = typeof window !== 'undefined' && 
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+  // Función para decodificar JWT
   const decodeJWT = (token: string): any => {
     try {
       const base64Url = token.split('.')[1];
@@ -41,7 +45,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Funcion para obtener URLs de los buckets
+  // Función para obtener URLs de los buckets
   const getUserImageUrls = async (userId: string, email: string): Promise<{ avatar: string; banner: string }> => {
     console.log('Buscando imagenes en buckets para usuario:', userId);
     
@@ -85,7 +89,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { avatar: avatarUrl, banner: bannerUrl };
   };
 
-  // Funcion para cargar usuario desde token JWT
+  // Función para cargar usuario desde token JWT
   const loadUserFromToken = async (token: string): Promise<boolean> => {
     try {
       console.log('Cargando usuario desde token JWT');
@@ -317,15 +321,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [isUsingJWT]);
 
   // ============================================
-  // FUNCION LOGIN (CORREGIDA CON URL COMPLETA)
+  // FUNCION LOGIN (CORREGIDA - SIN DUPLICAR /api/v1)
   // ============================================
   const login = async (email: string, password: string): Promise<LoginResponse> => {
     setIsLoading(true);
     setError(null);
     
     try {
-      const API_URL = getApiUrl();
-      const url = `${API_URL}/api/v1/auth/login`;
+      // ✅ URL base SIN /api/v1
+      const API_BASE_URL = getApiUrl();
+      
+      // ✅ Construir URL completa con /api/v1 solo una vez
+      const url = `${API_BASE_URL}/api/v1/auth/login`;
       
       console.log('Iniciando sesion con email:', email);
       console.log('Llamando a POST', url);
@@ -438,8 +445,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setError(null);
     
     try {
-      const API_URL = getApiUrl();
-      const url = `${API_URL}/api/v1/passkeys/login/complete`;
+      const API_BASE_URL = getApiUrl();
+      const url = `${API_BASE_URL}/api/v1/passkeys/login/complete`;
       
       console.log('Iniciando sesion con passkey para:', email);
       console.log('Llamando a POST', url);
@@ -578,8 +585,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setError(null);
     
     try {
-      const API_URL = getApiUrl();
-      const url = `${API_URL}/api/v1/passkeys/register/complete`;
+      const API_BASE_URL = getApiUrl();
+      const url = `${API_BASE_URL}/api/v1/passkeys/register/complete`;
       
       console.log('Registrando passkey para:', email);
       console.log('Llamando a POST', url);
@@ -713,8 +720,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('No hay sesión activa');
       }
       
-      const API_URL = getApiUrl();
-      const url = `${API_URL}/api/v1/auth/change-password`;
+      const API_BASE_URL = getApiUrl();
+      const url = `${API_BASE_URL}/api/v1/auth/change-password`;
       
       console.log('Cambiando contraseña para usuario:', user?.email);
       console.log('Llamando a POST', url);

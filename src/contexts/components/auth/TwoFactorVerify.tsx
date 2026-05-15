@@ -39,13 +39,14 @@ export const TwoFactorVerify = ({
   const gradientStart = '#8B5CF6';
   const gradientEnd = '#6366F1';
 
-  // ✅ CORREGIDO: Usar la misma lógica que api.ts para evitar duplicar /api/v1
+  // Detectar entorno y construir URL base correcta
   const isDevelopment = typeof window !== 'undefined' && 
     (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
   
+  // ✅ URL BASE CORRECTA - Incluye /api/v1
   const API_BASE_URL = isDevelopment 
-    ? '/api/v1'  // Ruta relativa (funciona con proxy de Vite)
-    : (import.meta.env.VITE_API_URL || 'https://quicknote-api-app-react.onrender.com/api/v1');
+    ? ''  // En desarrollo, el proxy de Vite maneja /api/v1
+    : (import.meta.env.VITE_API_URL || 'https://quicknote-api-app-react.onrender.com');
 
   useEffect(() => {
     document.body.style.overflow = 'auto';
@@ -102,7 +103,7 @@ export const TwoFactorVerify = ({
     return code.join('');
   };
 
-  // ✅ CORREGIDO: Verificar 2FA usando la URL correcta
+  // ✅ CORREGIDO: URL completa con /api/v1
   const handleVerify = async () => {
     const fullCode = getFullCode();
     
@@ -119,8 +120,8 @@ export const TwoFactorVerify = ({
       console.log('   Código:', fullCode);
       console.log('   TempToken:', tempToken);
       
-      // ✅ CORREGIDO: URL sin /api/v1 duplicado
-      const verifyUrl = `${API_BASE_URL}/auth/2fa/verify-login`;
+      // ✅ URL CORRECTA - Incluye /api/v1 antes de /auth/2fa/verify-login
+      const verifyUrl = `${API_BASE_URL}/api/v1/auth/2fa/verify-login`;
       console.log('   URL:', verifyUrl);
       
       const response = await fetch(verifyUrl, {
