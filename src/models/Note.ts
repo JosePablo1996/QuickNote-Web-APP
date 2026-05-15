@@ -2,12 +2,37 @@
 
 export type NoteShape = 'square' | 'rounded' | 'oval' | 'pill';
 
+// ========== NUEVAS PROPIEDADES ==========
+export type NoteIcon = 
+  | 'default'
+  | 'task'
+  | 'meeting'
+  | 'important'
+  | 'idea'
+  | 'shopping'
+  | 'call'
+  | 'email'
+  | 'document'
+  | 'travel'
+  | 'health'
+  | 'book'
+  | 'code';
+
+export type NoteSize = 'compact' | 'normal' | 'expanded';
+export type ColorIntensity = 'subtle' | 'medium' | 'intense';
+// ========================================
+
 export interface Note {
   id: string; // UUID
   title: string;
   content: string;
   color: string; // Hex color (ej: #3B82F6)
-  shape: NoteShape; // Nueva propiedad para la forma de la nota
+  shape: NoteShape;
+  // ========== NUEVAS PROPIEDADES ==========
+  icon?: NoteIcon;
+  size?: NoteSize;
+  colorIntensity?: ColorIntensity;
+  // ========================================
   is_favorite: boolean;
   is_archived: boolean;
   tags: string[];
@@ -21,7 +46,12 @@ export interface NoteCreate {
   title: string;
   content?: string;
   color?: string;
-  shape?: NoteShape; // Nueva propiedad
+  shape?: NoteShape;
+  // ========== NUEVAS PROPIEDADES ==========
+  icon?: NoteIcon;
+  size?: NoteSize;
+  colorIntensity?: ColorIntensity;
+  // ========================================
   is_favorite?: boolean;
   is_archived?: boolean;
   tags?: string[];
@@ -32,7 +62,12 @@ export interface NoteUpdate {
   title?: string;
   content?: string;
   color?: string;
-  shape?: NoteShape; // Nueva propiedad
+  shape?: NoteShape;
+  // ========== NUEVAS PROPIEDADES ==========
+  icon?: NoteIcon;
+  size?: NoteSize;
+  colorIntensity?: ColorIntensity;
+  // ========================================
   is_favorite?: boolean;
   is_archived?: boolean;
   tags?: string[];
@@ -45,36 +80,198 @@ export interface NoteFilters {
   tag?: string;
   search?: string;
   deleted?: boolean;
-  shape?: NoteShape; // Filtrar por forma
+  shape?: NoteShape;
+  // ========== NUEVOS FILTROS ==========
+  icon?: NoteIcon;
+  size?: NoteSize;
+  colorIntensity?: ColorIntensity;
+  // ====================================
 }
+
+// ========== CONFIGURACIÓN DE ICONOS ==========
+export interface IconConfig {
+  value: NoteIcon;
+  label: string;
+  iconName: string;
+  color: string;
+  description: string;
+}
+
+export const NOTE_ICONS: IconConfig[] = [
+  { value: 'default', label: 'Predeterminado', iconName: '📄', color: '#6B7280', description: 'Nota estándar' },
+  { value: 'task', label: 'Tarea', iconName: '✅', color: '#EF4444', description: 'Pendientes por completar' },
+  { value: 'meeting', label: 'Reunión', iconName: '👥', color: '#8B5CF6', description: 'Notas de reuniones' },
+  { value: 'important', label: 'Importante', iconName: '⭐', color: '#F59E0B', description: 'Información crítica' },
+  { value: 'idea', label: 'Idea', iconName: '💡', color: '#10B981', description: 'Inspiración y creatividad' },
+  { value: 'shopping', label: 'Compra', iconName: '🛒', color: '#EC4899', description: 'Listas de compras' },
+  { value: 'call', label: 'Llamada', iconName: '📞', color: '#06B6D4', description: 'Llamadas pendientes' },
+  { value: 'email', label: 'Email', iconName: '📧', color: '#3B82F6', description: 'Correos importantes' },
+  { value: 'document', label: 'Documento', iconName: '📄', color: '#6366F1', description: 'Documentación' },
+  { value: 'travel', label: 'Viaje', iconName: '✈️', color: '#14B8A6', description: 'Planes de viaje' },
+  { value: 'health', label: 'Salud', iconName: '❤️', color: '#84CC16', description: 'Salud y bienestar' },
+  { value: 'book', label: 'Libro', iconName: '📚', color: '#A855F7', description: 'Lecturas y resúmenes' },
+  { value: 'code', label: 'Código', iconName: '</>', color: '#1E293B', description: 'Notas de programación' },
+];
+
+// Función para obtener configuración de icono
+export const getIconConfig = (iconValue?: NoteIcon): IconConfig => {
+  if (!iconValue) return NOTE_ICONS[0];
+  return NOTE_ICONS.find(icon => icon.value === iconValue) || NOTE_ICONS[0];
+};
+
+// ========== CONFIGURACIÓN DE TAMAÑOS ==========
+export interface SizeConfig {
+  value: NoteSize;
+  label: string;
+  description: string;
+  minHeight: string;
+  padding: string;
+  titleSize: string;
+  contentLines: number;
+}
+
+export const NOTE_SIZES: SizeConfig[] = [
+  { 
+    value: 'compact', 
+    label: 'Compacto', 
+    description: 'Máxima densidad de información',
+    minHeight: '100px',
+    padding: 'p-3',
+    titleSize: 'text-sm',
+    contentLines: 2
+  },
+  { 
+    value: 'normal', 
+    label: 'Normal', 
+    description: 'Equilibrio entre información y espacio',
+    minHeight: '160px',
+    padding: 'p-4',
+    titleSize: 'text-base',
+    contentLines: 3
+  },
+  { 
+    value: 'expanded', 
+    label: 'Expandido', 
+    description: 'Más espacio para contenido',
+    minHeight: '220px',
+    padding: 'p-5',
+    titleSize: 'text-lg',
+    contentLines: 4
+  },
+];
+
+// Función para obtener configuración de tamaño
+export const getSizeConfig = (sizeValue?: NoteSize): SizeConfig => {
+  if (!sizeValue) return NOTE_SIZES[1]; // Normal por defecto
+  return NOTE_SIZES.find(size => size.value === sizeValue) || NOTE_SIZES[1];
+};
+
+// ========== CONFIGURACIÓN DE INTENSIDAD DE COLOR ==========
+export interface IntensityConfig {
+  value: ColorIntensity;
+  label: string;
+  bgOpacity: number;
+  borderOpacity: number;
+  shadowIntensity: number;
+  description: string;
+}
+
+export const COLOR_INTENSITIES: IntensityConfig[] = [
+  { 
+    value: 'subtle', 
+    label: 'Sutil', 
+    bgOpacity: 0.05, 
+    borderOpacity: 0.2,
+    shadowIntensity: 0.1,
+    description: 'Fondo muy suave'
+  },
+  { 
+    value: 'medium', 
+    label: 'Medio', 
+    bgOpacity: 0.12, 
+    borderOpacity: 0.4,
+    shadowIntensity: 0.2,
+    description: 'Equilibrio perfecto'
+  },
+  { 
+    value: 'intense', 
+    label: 'Intenso', 
+    bgOpacity: 0.2, 
+    borderOpacity: 0.6,
+    shadowIntensity: 0.3,
+    description: 'Color bien marcado'
+  },
+];
+
+// Función para obtener configuración de intensidad
+export const getIntensityConfig = (intensityValue?: ColorIntensity): IntensityConfig => {
+  if (!intensityValue) return COLOR_INTENSITIES[1]; // Medio por defecto
+  return COLOR_INTENSITIES.find(intensity => intensity.value === intensityValue) || COLOR_INTENSITIES[1];
+};
+
+// ========== FUNCIONES ACTUALIZADAS CON NUEVAS PROPIEDADES ==========
+
+// Función para obtener color con opacidad según intensidad
+export const getColorWithOpacity = (color: string, opacity: number = 0.15): string => {
+  const hex = color.replace('#', '');
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+};
+
+// Función para obtener opacidad según intensidad de color
+export const getIntensityOpacity = (intensity: ColorIntensity, type: 'bg' | 'border'): number => {
+  const config = getIntensityConfig(intensity);
+  return type === 'bg' ? config.bgOpacity : config.borderOpacity;
+};
 
 // Configuración de formas disponibles
 export const NOTE_SHAPES: { value: NoteShape; label: string; icon: string; className: string }[] = [
-  { 
-    value: 'square', 
-    label: 'Cuadrado', 
-    icon: '⬛', 
-    className: 'rounded-none' 
-  },
-  { 
-    value: 'rounded', 
-    label: 'Esquinas redondas', 
-    icon: '🟫', 
-    className: 'rounded-xl' 
-  },
-  { 
-    value: 'oval', 
-    label: 'Ovalado', 
-    icon: '🥚', 
-    className: 'rounded-full aspect-video' 
-  },
-  { 
-    value: 'pill', 
-    label: 'Píldora', 
-    icon: '💊', 
-    className: 'rounded-full' 
-  },
+  { value: 'square', label: 'Cuadrado', icon: '⬛', className: 'rounded-none' },
+  { value: 'rounded', label: 'Esquinas redondas', icon: '🟫', className: 'rounded-xl' },
+  { value: 'oval', label: 'Ovalado', icon: '🥚', className: 'rounded-full aspect-video' },
+  { value: 'pill', label: 'Píldora', icon: '💊', className: 'rounded-full' },
 ];
+
+// Función para obtener clase de forma CSS (actualizada para soportar todas las formas)
+export const getShapeClassName = (shape: NoteShape): string => {
+  const shapeConfig = NOTE_SHAPES.find(s => s.value === shape);
+  return shapeConfig?.className || NOTE_SHAPES[1].className;
+};
+
+// Función para obtener estilos completos de la nota (color + forma + intensidad)
+export const getNoteStyle = (
+  color: string, 
+  shape: NoteShape, 
+  intensity: ColorIntensity = 'medium'
+): React.CSSProperties => {
+  const intensityConfig = getIntensityConfig(intensity);
+  const shapeClass = getShapeClassName(shape);
+  
+  let borderRadius = '0.75rem'; // rounded-xl
+  if (shape === 'square') borderRadius = '0';
+  if (shape === 'rounded') borderRadius = '0.75rem';
+  if (shape === 'oval') borderRadius = '9999px';
+  if (shape === 'pill') borderRadius = '9999px';
+  
+  return {
+    backgroundColor: getColorWithOpacity(color, intensityConfig.bgOpacity),
+    borderLeft: `4px solid ${getColorWithOpacity(color, intensityConfig.borderOpacity)}`,
+    boxShadow: `0 4px 12px ${getColorWithOpacity(color, intensityConfig.shadowIntensity)}`,
+    borderRadius,
+    transition: 'all 0.3s ease',
+  };
+};
+
+// Función para obtener estilos en hover (actualizada con intensidad)
+export const getNoteHoverStyle = (color: string, intensity: ColorIntensity = 'medium'): React.CSSProperties => {
+  const intensityConfig = getIntensityConfig(intensity);
+  return {
+    boxShadow: `0 8px 24px ${getColorWithOpacity(color, intensityConfig.shadowIntensity + 0.1)}`,
+    transform: 'translateY(-2px)',
+  };
+};
 
 // Colores predefinidos para notas
 export const PREDEFINED_COLORS = [
@@ -90,47 +287,16 @@ export const PREDEFINED_COLORS = [
   { name: 'Índigo', value: '#6366F1', bgClass: 'bg-indigo-500', bgLight: 'bg-indigo-50 dark:bg-indigo-950/30', borderColor: 'border-indigo-500' },
 ];
 
-// Función para obtener color con opacidad (para fondos suaves)
-export const getColorWithOpacity = (color: string, opacity: number = 0.15): string => {
-  // Convertir hex a RGB
-  const hex = color.replace('#', '');
-  const r = parseInt(hex.substring(0, 2), 16);
-  const g = parseInt(hex.substring(2, 4), 16);
-  const b = parseInt(hex.substring(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-};
-
-// Función para obtener clase de forma CSS
-export const getShapeClassName = (shape: NoteShape): string => {
-  const shapeConfig = NOTE_SHAPES.find(s => s.value === shape);
-  return shapeConfig?.className || NOTE_SHAPES[1].className; // Por defecto 'rounded'
-};
-
-// Función para obtener estilos completos de la nota (color + forma)
-export const getNoteStyle = (color: string, shape: NoteShape): React.CSSProperties => {
-  return {
-    backgroundColor: getColorWithOpacity(color, 0.15),
-    borderLeft: `4px solid ${color}`,
-    boxShadow: `0 4px 12px ${getColorWithOpacity(color, 0.3)}`,
-    transition: 'all 0.3s ease',
-  };
-};
-
-// Función para obtener estilos en hover
-export const getNoteHoverStyle = (color: string): React.CSSProperties => {
-  return {
-    boxShadow: `0 8px 24px ${getColorWithOpacity(color, 0.4)}`,
-    transform: 'translateY(-2px)',
-  };
-};
-
 export const NoteUtils = {
-  // Crear nota vacía (ahora con forma por defecto)
+  // Crear nota vacía (con valores por defecto de las nuevas propiedades)
   createEmpty: (userId?: string): NoteCreate => ({
     title: '',
     content: '',
     color: '#3B82F6',
-    shape: 'rounded', // Forma por defecto: esquinas redondas
+    shape: 'rounded',
+    icon: 'default',
+    size: 'normal',
+    colorIntensity: 'medium',
     is_favorite: false,
     is_archived: false,
     tags: [],
@@ -156,17 +322,21 @@ export const NoteUtils = {
     return `Hace ${Math.floor(diffDays / 30)} mes${Math.floor(diffDays / 30) > 1 ? 'es' : ''}`;
   },
 
-  // Obtener título truncado
-  getTruncatedTitle: (note: Note, maxLength: number = 50): string => {
-    if (note.title.length <= maxLength) return note.title;
-    return note.title.substring(0, maxLength) + '...';
+  // Obtener título truncado según tamaño
+  getTruncatedTitle: (note: Note, maxLength?: number): string => {
+    const sizeConfig = getSizeConfig(note.size);
+    const limit = maxLength || (note.size === 'compact' ? 30 : note.size === 'normal' ? 50 : 70);
+    if (note.title.length <= limit) return note.title;
+    return note.title.substring(0, limit) + '...';
   },
 
-  // Obtener contenido truncado
-  getTruncatedContent: (note: Note, maxLength: number = 100): string => {
+  // Obtener contenido truncado según tamaño
+  getTruncatedContent: (note: Note, maxLength?: number): string => {
     if (!note.content) return 'Sin contenido';
-    if (note.content.length <= maxLength) return note.content;
-    return note.content.substring(0, maxLength) + '...';
+    const sizeConfig = getSizeConfig(note.size);
+    const limit = maxLength || (note.size === 'compact' ? 60 : note.size === 'normal' ? 100 : 150);
+    if (note.content.length <= limit) return note.content;
+    return note.content.substring(0, limit) + '...';
   },
 
   // Filtrar notas activas (no eliminadas)
@@ -194,6 +364,16 @@ export const NoteUtils = {
     return notes.filter(note => note.shape === shape && !note.deleted_at);
   },
 
+  // Filtrar por icono
+  getNotesByIcon: (notes: Note[], icon: NoteIcon): Note[] => {
+    return notes.filter(note => note.icon === icon && !note.deleted_at);
+  },
+
+  // Filtrar por tamaño
+  getNotesBySize: (notes: Note[], size: NoteSize): Note[] => {
+    return notes.filter(note => note.size === size && !note.deleted_at);
+  },
+
   // Ordenar por fecha (más reciente primero)
   sortByDate: (notes: Note[]): Note[] => {
     return [...notes].sort((a, b) => 
@@ -217,7 +397,7 @@ export const NoteUtils = {
     );
   },
 
-  // Obtener estadísticas (actualizado con forma)
+  // Obtener estadísticas (actualizado con nuevas propiedades)
   getStats: (notes: Note[]): {
     total: number;
     active: number;
@@ -227,6 +407,8 @@ export const NoteUtils = {
     withTags: number;
     totalTags: number;
     shapesCount: Record<NoteShape, number>;
+    iconsCount: Record<NoteIcon, number>;
+    sizesCount: Record<NoteSize, number>;
   } => {
     const active = notes.filter(n => !n.deleted_at && !n.is_archived).length;
     const archived = notes.filter(n => n.is_archived && !n.deleted_at).length;
@@ -243,6 +425,30 @@ export const NoteUtils = {
       pill: notes.filter(n => n.shape === 'pill' && !n.deleted_at).length,
     };
 
+    // Contar por icono
+    const iconsCount = {
+      default: notes.filter(n => n.icon === 'default' && !n.deleted_at).length,
+      task: notes.filter(n => n.icon === 'task' && !n.deleted_at).length,
+      meeting: notes.filter(n => n.icon === 'meeting' && !n.deleted_at).length,
+      important: notes.filter(n => n.icon === 'important' && !n.deleted_at).length,
+      idea: notes.filter(n => n.icon === 'idea' && !n.deleted_at).length,
+      shopping: notes.filter(n => n.icon === 'shopping' && !n.deleted_at).length,
+      call: notes.filter(n => n.icon === 'call' && !n.deleted_at).length,
+      email: notes.filter(n => n.icon === 'email' && !n.deleted_at).length,
+      document: notes.filter(n => n.icon === 'document' && !n.deleted_at).length,
+      travel: notes.filter(n => n.icon === 'travel' && !n.deleted_at).length,
+      health: notes.filter(n => n.icon === 'health' && !n.deleted_at).length,
+      book: notes.filter(n => n.icon === 'book' && !n.deleted_at).length,
+      code: notes.filter(n => n.icon === 'code' && !n.deleted_at).length,
+    };
+
+    // Contar por tamaño
+    const sizesCount = {
+      compact: notes.filter(n => n.size === 'compact' && !n.deleted_at).length,
+      normal: notes.filter(n => n.size === 'normal' && !n.deleted_at).length,
+      expanded: notes.filter(n => n.size === 'expanded' && !n.deleted_at).length,
+    };
+
     return {
       total: notes.length,
       active,
@@ -252,17 +458,17 @@ export const NoteUtils = {
       withTags,
       totalTags,
       shapesCount,
+      iconsCount,
+      sizesCount,
     };
   },
 
   // Obtener color de texto contrastante (blanco o negro según fondo)
   getContrastColor: (hexColor: string): string => {
-    // Convertir hex a RGB
     const hex = hexColor.replace('#', '');
     const r = parseInt(hex.substring(0, 2), 16);
     const g = parseInt(hex.substring(2, 4), 16);
     const b = parseInt(hex.substring(4, 6), 16);
-    // Calcular luminancia
     const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
     return luminance > 0.5 ? '#000000' : '#FFFFFF';
   },

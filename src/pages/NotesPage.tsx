@@ -22,9 +22,27 @@ import {
   Check,
   Trash2,
   RefreshCw,
-  MoreVertical
+  MoreVertical,
+  Filter,
+  Sparkles,
+  GripVertical,
+  Droplet,
+  Shapes
 } from 'lucide-react';
 import ExportButton from '../contexts/components/export/ExportButton';
+
+// ========== IMPORTACIONES DE NUEVAS PROPIEDADES ==========
+import {
+  NOTE_ICONS,
+  NOTE_SIZES,
+  COLOR_INTENSITIES,
+  NoteIcon,
+  NoteSize,
+  ColorIntensity,
+  getIconConfig,
+  getSizeConfig,
+  getIntensityConfig
+} from '../models/Note';
 
 const NotesPage: React.FC = () => {
   const navigate = useNavigate();
@@ -56,6 +74,14 @@ const NotesPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [availableTags, setAvailableTags] = useState<string[]>([]);
   
+  // ========== NUEVOS FILTROS ==========
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const [selectedIcon, setSelectedIcon] = useState<NoteIcon | 'all'>('all');
+  const [selectedSize, setSelectedSize] = useState<NoteSize | 'all'>('all');
+  const [selectedIntensity, setSelectedIntensity] = useState<ColorIntensity | 'all'>('all');
+  const [activeFiltersCount, setActiveFiltersCount] = useState(0);
+  // ===================================
+  
   // Estados para selección múltiple
   const [selectedNotes, setSelectedNotes] = useState<Set<string>>(new Set());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -63,6 +89,7 @@ const NotesPage: React.FC = () => {
   // Estado para el menú FAB
   const [isFabMenuOpen, setIsFabMenuOpen] = useState(false);
   const fabMenuRef = useRef<HTMLDivElement>(null);
+  const filterMenuRef = useRef<HTMLDivElement>(null);
 
   // Estados para operaciones
   const [isDeletingMultiple, setIsDeletingMultiple] = useState(false);
@@ -112,6 +139,15 @@ const NotesPage: React.FC = () => {
     if (savedSort && Object.keys(sortOptions).includes(savedSort)) {
       setCurrentSortOption(savedSort);
     }
+    
+    // Cargar filtros guardados
+    const savedIcon = localStorage.getItem('notes_filter_icon') as NoteIcon | 'all' | null;
+    const savedSize = localStorage.getItem('notes_filter_size') as NoteSize | 'all' | null;
+    const savedIntensity = localStorage.getItem('notes_filter_intensity') as ColorIntensity | 'all' | null;
+    
+    if (savedIcon) setSelectedIcon(savedIcon);
+    if (savedSize) setSelectedSize(savedSize);
+    if (savedIntensity) setSelectedIntensity(savedIntensity);
   }, []);
 
   // Guardar preferencias cuando cambien
@@ -123,17 +159,34 @@ const NotesPage: React.FC = () => {
     localStorage.setItem('notes_sort', currentSortOption);
   }, [currentSortOption]);
 
-  // Cerrar menú FAB al hacer clic fuera
+  // Guardar filtros
+  useEffect(() => {
+    localStorage.setItem('notes_filter_icon', selectedIcon);
+    localStorage.setItem('notes_filter_size', selectedSize);
+    localStorage.setItem('notes_filter_intensity', selectedIntensity);
+    
+    // Contar filtros activos
+    let count = 0;
+    if (selectedIcon !== 'all') count++;
+    if (selectedSize !== 'all') count++;
+    if (selectedIntensity !== 'all') count++;
+    setActiveFiltersCount(count);
+  }, [selectedIcon, selectedSize, selectedIntensity]);
+
+  // Cerrar menús al hacer clic fuera
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (fabMenuRef.current && !fabMenuRef.current.contains(event.target as Node)) {
         setIsFabMenuOpen(false);
       }
+      if (filterMenuRef.current && !filterMenuRef.current.contains(event.target as Node) && showFilterMenu) {
+        setShowFilterMenu(false);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [showFilterMenu]);
 
   // Cerrar menú de ordenamiento al hacer clic fuera
   useEffect(() => {
@@ -183,6 +236,31 @@ const NotesPage: React.FC = () => {
     }
   }, []);
 
+  // ========== NUEVAS FUNCIONES DE FILTRADO ==========
+  const filterByIcon = useCallback((notesToFilter: Note[]): Note[] => {
+    if (selectedIcon === 'all') return notesToFilter;
+    return notesToFilter.filter(note => (note.icon as NoteIcon) === selectedIcon);
+  }, [selectedIcon]);
+
+  const filterBySize = useCallback((notesToFilter: Note[]): Note[] => {
+    if (selectedSize === 'all') return notesToFilter;
+    return notesToFilter.filter(note => (note.size as NoteSize) === selectedSize);
+  }, [selectedSize]);
+
+  const filterByIntensity = useCallback((notesToFilter: Note[]): Note[] => {
+    if (selectedIntensity === 'all') return notesToFilter;
+    return notesToFilter.filter(note => (note.colorIntensity as ColorIntensity) === selectedIntensity);
+  }, [selectedIntensity]);
+  // ================================================
+
+  // Limpiar todos los filtros
+  const clearAllFilters = useCallback(() => {
+    setSelectedIcon('all');
+    setSelectedSize('all');
+    setSelectedIntensity('all');
+    info('🧹 Filtros eliminados');
+  }, [info]);
+
   // Función para eliminar múltiples notas
   const deleteMultipleNotes = useCallback(async (ids: string[]): Promise<{ success: number; failed: number }> => {
     let success = 0;
@@ -211,24 +289,32 @@ const NotesPage: React.FC = () => {
     });
   }, [info]);
 
-  // Filtrar y ordenar notas
+  // Filtrar y ordenar notas (actualizado con nuevos filtros)
   const getFilteredAndSortedNotes = useCallback(() => {
     let filtered = activeNotes;
 
+    // Filtro por categoría/etiqueta
     if (selectedCategory !== 'Todas') {
       filtered = getNotesByTag(selectedCategory).filter((note: Note) => 
         !note.is_archived && !note.deleted_at
       );
     }
 
+    // Filtro por búsqueda
     if (searchQuery.trim()) {
       filtered = searchNotes(searchQuery).filter((note: Note) => 
         !note.is_archived && !note.deleted_at
       );
     }
 
+    // ========== NUEVOS FILTROS ==========
+    filtered = filterByIcon(filtered);
+    filtered = filterBySize(filtered);
+    filtered = filterByIntensity(filtered);
+    // ====================================
+
     return sortNotes(filtered, currentSortOption);
-  }, [activeNotes, selectedCategory, searchQuery, getNotesByTag, searchNotes, sortNotes, currentSortOption]);
+  }, [activeNotes, selectedCategory, searchQuery, getNotesByTag, searchNotes, sortNotes, currentSortOption, filterByIcon, filterBySize, filterByIntensity]);
 
   const displayNotes = getFilteredAndSortedNotes();
 
@@ -253,6 +339,7 @@ const NotesPage: React.FC = () => {
     if (window.confirm('¿Estás seguro de que quieres eliminar esta nota?')) {
       const successResult = await deleteNote(id);
       if (successResult && isMountedRef.current) {
+        success('✅ Nota eliminada correctamente');
         if (isSelectionMode) {
           setSelectedNotes(prev => {
             const newSet = new Set(prev);
@@ -260,6 +347,8 @@ const NotesPage: React.FC = () => {
             return newSet;
           });
         }
+      } else {
+        showError('❌ Error al eliminar la nota');
       }
     }
   };
@@ -267,6 +356,8 @@ const NotesPage: React.FC = () => {
   const handleToggleArchive = async (id: string) => {
     const successResult = await toggleArchive(id);
     if (successResult && isMountedRef.current) {
+      const note = activeNotes.find(n => n.id === id);
+      success(note?.is_archived ? '📦 Nota archivada' : '📦 Nota restaurada');
       if (isSelectionMode && selectedNotes.has(id)) {
         setSelectedNotes(prev => {
           const newSet = new Set(prev);
@@ -308,7 +399,11 @@ const NotesPage: React.FC = () => {
   };
 
   const handleToggleFavorite = async (id: string) => {
-    await toggleFavorite(id);
+    const successResult = await toggleFavorite(id);
+    if (successResult) {
+      const note = activeNotes.find(n => n.id === id);
+      success(note?.is_favorite ? '⭐ Nota añadida a favoritos' : '⭐ Nota eliminada de favoritos');
+    }
   };
 
   const handleSync = async () => {
@@ -320,6 +415,7 @@ const NotesPage: React.FC = () => {
     
     if (isMountedRef.current) {
       setIsSyncing(false);
+      success('🔄 Notas sincronizadas correctamente');
     }
   };
 
@@ -380,6 +476,16 @@ const NotesPage: React.FC = () => {
   };
 
   const selectedCount = selectedNotes.size;
+
+  // Obtener estadísticas de filtros
+  const getFilterStats = () => {
+    const iconCount = filterByIcon(activeNotes).length;
+    const sizeCount = filterBySize(activeNotes).length;
+    const intensityCount = filterByIntensity(activeNotes).length;
+    return { iconCount, sizeCount, intensityCount };
+  };
+
+  const filterStats = getFilterStats();
 
   if (isLoading && activeNotes.length === 0) {
     return (
@@ -456,7 +562,7 @@ const NotesPage: React.FC = () => {
 
       {/* Barra de búsqueda y controles */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <div className="flex gap-2 items-center relative sort-menu-container">
+        <div className="flex gap-2 items-center relative">
           {/* Input de búsqueda */}
           <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -480,8 +586,185 @@ const NotesPage: React.FC = () => {
             )}
           </div>
           
+          {/* ========== NUEVO: Botón de filtros ========== */}
+          <div className="relative" ref={filterMenuRef}>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowFilterMenu(!showFilterMenu)}
+              className={`relative p-3 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border rounded-xl transition-all ${
+                activeFiltersCount > 0 
+                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-500' 
+                  : 'border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'
+              }`}
+            >
+              <Filter className="w-5 h-5" />
+              {activeFiltersCount > 0 && (
+                <motion.span
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center"
+                >
+                  {activeFiltersCount}
+                </motion.span>
+              )}
+            </motion.button>
+
+            {/* Menú de filtros */}
+            <AnimatePresence>
+              {showFilterMenu && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="absolute right-0 mt-2 w-80 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden z-50"
+                >
+                  <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-4 py-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+                        <Filter className="w-4 h-4" />
+                        Filtrar notas
+                      </h3>
+                      {activeFiltersCount > 0 && (
+                        <button
+                          onClick={clearAllFilters}
+                          className="text-xs text-white/80 hover:text-white transition-colors"
+                        >
+                          Limpiar todo
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="p-4 space-y-4 max-h-96 overflow-y-auto">
+                    {/* Filtro por Icono */}
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                        <Sparkles className="w-3 h-3" />
+                        Icono
+                      </label>
+                      <div className="grid grid-cols-4 gap-1 mt-2">
+                        <button
+                          onClick={() => setSelectedIcon('all')}
+                          className={`px-2 py-1.5 rounded-lg text-xs transition-all ${
+                            selectedIcon === 'all'
+                              ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white'
+                              : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                          }`}
+                        >
+                          Todos ({activeNotes.length})
+                        </button>
+                        {NOTE_ICONS.map(icon => (
+                          <button
+                            key={icon.value}
+                            onClick={() => setSelectedIcon(icon.value)}
+                            className={`px-2 py-1.5 rounded-lg text-xs transition-all flex items-center justify-center gap-1 ${
+                              selectedIcon === icon.value
+                                ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white'
+                                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                            }`}
+                          >
+                            <span className="text-sm">{icon.iconName}</span>
+                            <span className="text-xs">{icon.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                      {selectedIcon !== 'all' && (
+                        <p className="text-xs text-gray-400 mt-1">
+                          {filterStats.iconCount} notas con este icono
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Filtro por Tamaño */}
+                    <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                        <GripVertical className="w-3 h-3" />
+                        Tamaño
+                      </label>
+                      <div className="grid grid-cols-2 gap-2 mt-2">
+                        <button
+                          onClick={() => setSelectedSize('all')}
+                          className={`px-3 py-2 rounded-lg text-sm transition-all ${
+                            selectedSize === 'all'
+                              ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white'
+                              : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                          }`}
+                        >
+                          Todos ({activeNotes.length})
+                        </button>
+                        {NOTE_SIZES.map(size => (
+                          <button
+                            key={size.value}
+                            onClick={() => setSelectedSize(size.value)}
+                            className={`px-3 py-2 rounded-lg text-sm transition-all ${
+                              selectedSize === size.value
+                                ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white'
+                                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                            }`}
+                          >
+                            {size.label}
+                          </button>
+                        ))}
+                      </div>
+                      {selectedSize !== 'all' && (
+                        <p className="text-xs text-gray-400 mt-1">
+                          {filterStats.sizeCount} notas con este tamaño
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Filtro por Intensidad */}
+                    <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                        <Droplet className="w-3 h-3" />
+                        Intensidad de color
+                      </label>
+                      <div className="grid grid-cols-2 gap-2 mt-2">
+                        <button
+                          onClick={() => setSelectedIntensity('all')}
+                          className={`px-3 py-2 rounded-lg text-sm transition-all ${
+                            selectedIntensity === 'all'
+                              ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white'
+                              : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                          }`}
+                        >
+                          Todos ({activeNotes.length})
+                        </button>
+                        {COLOR_INTENSITIES.map(intensity => (
+                          <button
+                            key={intensity.value}
+                            onClick={() => setSelectedIntensity(intensity.value)}
+                            className={`px-3 py-2 rounded-lg text-sm transition-all flex items-center justify-between ${
+                              selectedIntensity === intensity.value
+                                ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white'
+                                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                            }`}
+                          >
+                            <span>{intensity.label}</span>
+                            <div className="flex gap-0.5">
+                              <div className={`w-2 h-2 rounded-full ${selectedIntensity === intensity.value ? 'bg-white' : 'bg-current'}`} style={{ opacity: intensity.value === 'subtle' ? 0.3 : intensity.value === 'medium' ? 0.6 : 1 }} />
+                              <div className={`w-2 h-2 rounded-full ${selectedIntensity === intensity.value ? 'bg-white' : 'bg-current'}`} style={{ opacity: intensity.value === 'subtle' ? 0.3 : intensity.value === 'medium' ? 0.6 : 1 }} />
+                              <div className={`w-2 h-2 rounded-full ${selectedIntensity === intensity.value ? 'bg-white' : 'bg-current'}`} style={{ opacity: intensity.value === 'subtle' ? 0.3 : intensity.value === 'medium' ? 0.6 : 1 }} />
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                      {selectedIntensity !== 'all' && (
+                        <p className="text-xs text-gray-400 mt-1">
+                          {filterStats.intensityCount} notas con esta intensidad
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
           {/* Botón de ordenamiento */}
-          <div className="relative">
+          <div className="relative sort-menu-container">
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -553,6 +836,44 @@ const NotesPage: React.FC = () => {
           {/* Botón de exportación */}
           <ExportButton variant="secondary" size="md" selectedNoteIds={Array.from(selectedNotes)} />
         </div>
+        
+        {/* ========== NUEVO: Indicador de filtros activos ========== */}
+        {activeFiltersCount > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center gap-2 mt-3 flex-wrap"
+          >
+            <span className="text-xs text-gray-500 dark:text-gray-400">Filtros activos:</span>
+            {selectedIcon !== 'all' && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+                <Sparkles className="w-3 h-3" />
+                {getIconConfig(selectedIcon).label}
+                <button onClick={() => setSelectedIcon('all')} className="ml-1 hover:text-blue-800">×</button>
+              </span>
+            )}
+            {selectedSize !== 'all' && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">
+                <GripVertical className="w-3 h-3" />
+                {getSizeConfig(selectedSize).label}
+                <button onClick={() => setSelectedSize('all')} className="ml-1 hover:text-green-800">×</button>
+              </span>
+            )}
+            {selectedIntensity !== 'all' && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
+                <Droplet className="w-3 h-3" />
+                {getIntensityConfig(selectedIntensity).label}
+                <button onClick={() => setSelectedIntensity('all')} className="ml-1 hover:text-purple-800">×</button>
+              </span>
+            )}
+            <button
+              onClick={clearAllFilters}
+              className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            >
+              Limpiar todos
+            </button>
+          </motion.div>
+        )}
       </div>
 
       {/* Barra de selección múltiple */}
@@ -613,43 +934,61 @@ const NotesPage: React.FC = () => {
                 actionLabel="Crear primera nota"
                 onAction={handleCreateNote}
               />
+              {activeFiltersCount > 0 && (
+                <div className="text-center mt-4">
+                  <button
+                    onClick={clearAllFilters}
+                    className="text-sm text-blue-500 hover:text-blue-600 transition-colors"
+                  >
+                    Limpiar filtros para ver todas las notas
+                  </button>
+                </div>
+              )}
             </motion.div>
           ) : (
-            <motion.div
-              key={`${currentView}-${displayNotes.length}`}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.3 }}
-              className={
-                currentView === 'grid' 
-                  ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'
-                  : 'space-y-4 max-w-4xl mx-auto'
-              }
-            >
-              {displayNotes.map((note: Note, index: number) => (
-                <motion.div
-                  key={note.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.03, duration: 0.3 }}
-                  layout
-                  layoutId={`note-${note.id}`}
-                  className={currentView === 'list' ? 'w-full' : ''}
-                >
-                  <NoteCard
-                    note={note}
-                    onClick={() => handleNoteClick(note.id)}
-                    onEdit={() => handleEditNote(note.id)}
-                    onDelete={() => handleDeleteNote(note.id)}
-                    onToggleFavorite={() => handleToggleFavorite(note.id)}
-                    onToggleArchive={() => handleToggleArchive(note.id)}
-                    isSelected={selectedNotes.has(note.id)}
-                    isGridMode={currentView === 'grid'}
-                  />
-                </motion.div>
-              ))}
-            </motion.div>
+            <>
+              {/* Contador de resultados */}
+              <div className="mb-4 text-sm text-gray-500 dark:text-gray-400">
+                Mostrando {displayNotes.length} nota{displayNotes.length !== 1 ? 's' : ''}
+                {activeFiltersCount > 0 && ' (filtradas)'}
+              </div>
+              
+              <motion.div
+                key={`${currentView}-${displayNotes.length}`}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.3 }}
+                className={
+                  currentView === 'grid' 
+                    ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'
+                    : 'space-y-4 max-w-4xl mx-auto'
+                }
+              >
+                {displayNotes.map((note: Note, index: number) => (
+                  <motion.div
+                    key={note.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.03, duration: 0.3 }}
+                    layout
+                    layoutId={`note-${note.id}`}
+                    className={currentView === 'list' ? 'w-full' : ''}
+                  >
+                    <NoteCard
+                      note={note}
+                      onClick={() => handleNoteClick(note.id)}
+                      onEdit={() => handleEditNote(note.id)}
+                      onDelete={() => handleDeleteNote(note.id)}
+                      onToggleFavorite={() => handleToggleFavorite(note.id)}
+                      onToggleArchive={() => handleToggleArchive(note.id)}
+                      isSelected={selectedNotes.has(note.id)}
+                      isGridMode={currentView === 'grid'}
+                    />
+                  </motion.div>
+                ))}
+              </motion.div>
+            </>
           )}
         </AnimatePresence>
       </div>

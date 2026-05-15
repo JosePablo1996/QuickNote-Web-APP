@@ -1,205 +1,559 @@
+// src/utils/noteUtils.ts
 import { Note } from '../models/Note';
 
-// Formatear fecha para mostrar
-export const formatDateTime = (date: string | Date | undefined): string => {
-  if (!date) return 'Fecha desconocida';
+// ========== IMPORTACIONES DE NUEVAS PROPIEDADES ==========
+import {
+  NoteIcon,
+  NoteSize,
+  ColorIntensity,
+  NoteShape,
+  NOTE_ICONS,
+  NOTE_SIZES,
+  COLOR_INTENSITIES,
+  NOTE_SHAPES,
+  getIconConfig,
+  getSizeConfig,
+  getIntensityConfig,
+  getColorWithOpacity
+} from '../models/Note';
+
+// ========== FUNCIONES EXISTENTES ==========
+
+/**
+ * Formatea una fecha para mostrar en la UI
+ */
+export const formatDateTime = (dateStr?: string | null): string => {
+  if (!dateStr) return 'Fecha desconocida';
   
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
-  
-  return dateObj.toLocaleDateString('es-ES', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+  try {
+    const date = new Date(dateStr);
+    return date.toLocaleString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return 'Fecha inválida';
+  }
 };
 
-// Obtener color de la nota (con fallback)
-export const getNoteColorValue = (note: Note): string => {
-  return note.color || '#3B82F6';
+/**
+ * Formatea una fecha relativa (hoy, ayer, hace X días)
+ */
+export const formatRelativeDate = (dateStr?: string | null): string => {
+  if (!dateStr) return 'Fecha desconocida';
+  
+  try {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - date.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return 'Hoy';
+    if (diffDays === 1) return 'Ayer';
+    if (diffDays < 7) return `Hace ${diffDays} días`;
+    if (diffDays < 30) return `Hace ${Math.floor(diffDays / 7)} semana${Math.floor(diffDays / 7) > 1 ? 's' : ''}`;
+    if (diffDays < 365) return `Hace ${Math.floor(diffDays / 30)} mes${Math.floor(diffDays / 30) > 1 ? 'es' : ''}`;
+    return `Hace ${Math.floor(diffDays / 365)} año${Math.floor(diffDays / 365) > 1 ? 's' : ''}`;
+  } catch {
+    return 'Fecha inválida';
+  }
 };
 
-// Obtener iniciales del título
-export const getInitials = (title: string): string => {
-  if (!title) return '?';
+/**
+ * Obtiene las iniciales de un título
+ */
+export const getInitials = (title?: string): string => {
+  if (!title || title.trim().length === 0) return 'N';
   
-  const words = title.trim().split(' ');
-  
+  const words = title.trim().split(/\s+/);
   if (words.length === 1) {
-    return words[0].charAt(0).toUpperCase();
+    return words[0].substring(0, 2).toUpperCase();
   }
   
-  return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
+  return (words[0][0] + words[1][0]).toUpperCase();
 };
 
-// Truncar texto con límite de caracteres
+/**
+ * Trunca un texto a una longitud máxima
+ */
 export const truncateText = (text: string, maxLength: number = 100): string => {
   if (!text) return '';
   if (text.length <= maxLength) return text;
-  
   return text.substring(0, maxLength) + '...';
 };
 
-// Obtener fecha formateada para comparación
-export const getISODateString = (date: string | Date | undefined): string => {
-  if (!date) return new Date().toISOString();
-  if (typeof date === 'string') return date;
-  return date.toISOString();
+/**
+ * Capitaliza la primera letra de cada palabra
+ */
+export const capitalizeWords = (str: string): string => {
+  if (!str) return '';
+  return str.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
 };
 
-// Verificar si una nota está en la papelera
-export const isNoteInTrash = (note: Note): boolean => {
-  return !!note.deleted_at;
+/**
+ * Cuenta las palabras en un texto
+ */
+export const countWords = (text: string): number => {
+  if (!text || text.trim().length === 0) return 0;
+  return text.trim().split(/\s+/).length;
 };
 
-// Verificar si una nota está archivada
-export const isNoteArchived = (note: Note): boolean => {
-  return !!note.is_archived;
+/**
+ * Cuenta los caracteres en un texto
+ */
+export const countCharacters = (text: string): number => {
+  return text?.length || 0;
 };
 
-// Verificar si una nota es favorita
-export const isNoteFavorite = (note: Note): boolean => {
-  return !!note.is_favorite;
+// ========== FUNCIONES PARA ICONOS (sin JSX) ==========
+
+/**
+ * Obtiene el nombre del icono para mostrar en UI (como string)
+ */
+export const getNoteIconName = (icon?: NoteIcon): string => {
+  return getIconConfig(icon).iconName;
 };
 
-// Obtener color de fondo según el color de la nota
-export const getNoteBackgroundColor = (note: Note, opacity: number = 0.1): string => {
-  const color = getNoteColorValue(note);
-  // Convertir color hex a rgba
-  const r = parseInt(color.slice(1, 3), 16);
-  const g = parseInt(color.slice(3, 5), 16);
-  const b = parseInt(color.slice(5, 7), 16);
+/**
+ * Obtiene la etiqueta del icono de una nota
+ */
+export const getNoteIconLabel = (icon?: NoteIcon): string => {
+  return getIconConfig(icon).label;
+};
+
+/**
+ * Obtiene la descripción del icono de una nota
+ */
+export const getNoteIconDescription = (icon?: NoteIcon): string => {
+  return getIconConfig(icon).description;
+};
+
+/**
+ * Obtiene el color del icono en formato CSS
+ */
+export const getIconColorStyle = (noteColor: string, intensity: ColorIntensity = 'medium'): string => {
+  const intensityConfig = getIntensityConfig(intensity);
+  return getColorWithOpacity(noteColor, intensityConfig.borderOpacity + 0.2);
+};
+
+/**
+ * Verifica si el icono es el predeterminado
+ */
+export const isDefaultIcon = (icon?: NoteIcon): boolean => {
+  return !icon || icon === 'default';
+};
+
+/**
+ * Obtiene el valor del icono o el valor por defecto
+ */
+export const getValidIcon = (icon?: string): NoteIcon => {
+  return icon && NOTE_ICONS.some(i => i.value === icon) ? icon as NoteIcon : 'default';
+};
+
+// ========== FUNCIONES PARA TAMAÑOS ==========
+
+/**
+ * Obtiene la configuración de tamaño de una nota
+ */
+export const getNoteSizeConfig = (size?: NoteSize) => {
+  return getSizeConfig(size);
+};
+
+/**
+ * Obtiene la clase de padding según el tamaño de la nota
+ */
+export const getPaddingClassBySize = (size?: NoteSize): string => {
+  return getSizeConfig(size).padding;
+};
+
+/**
+ * Obtiene la clase de tamaño de título según el tamaño de la nota
+ */
+export const getTitleSizeClassBySize = (size?: NoteSize): string => {
+  return getSizeConfig(size).titleSize;
+};
+
+/**
+ * Obtiene el número de líneas de contenido según el tamaño de la nota
+ */
+export const getContentLinesBySize = (size?: NoteSize): number => {
+  return getSizeConfig(size).contentLines;
+};
+
+/**
+ * Obtiene la altura mínima según el tamaño de la nota
+ */
+export const getMinHeightBySize = (size?: NoteSize): string => {
+  return getSizeConfig(size).minHeight;
+};
+
+/**
+ * Obtiene la clase CSS para el número de líneas de contenido
+ */
+export const getLineClampClassBySize = (size?: NoteSize): string => {
+  const lines = getContentLinesBySize(size);
+  return `line-clamp-${lines}`;
+};
+
+/**
+ * Obtiene el tamaño de fuente del título como clase Tailwind
+ */
+export const getTitleFontSizeClass = (size?: NoteSize): string => {
+  const sizeConfig = getSizeConfig(size);
+  return sizeConfig.titleSize;
+};
+
+// ========== FUNCIONES PARA INTENSIDAD ==========
+
+/**
+ * Obtiene la configuración de intensidad de una nota
+ */
+export const getNoteIntensityConfig = (intensity?: ColorIntensity) => {
+  return getIntensityConfig(intensity);
+};
+
+/**
+ * Obtiene la opacidad de fondo según intensidad
+ */
+export const getBackgroundOpacityByIntensity = (intensity?: ColorIntensity): number => {
+  return getIntensityConfig(intensity).bgOpacity;
+};
+
+/**
+ * Obtiene la opacidad de borde según intensidad
+ */
+export const getBorderOpacityByIntensity = (intensity?: ColorIntensity): number => {
+  return getIntensityConfig(intensity).borderOpacity;
+};
+
+/**
+ * Obtiene la intensidad de sombra según intensidad
+ */
+export const getShadowIntensityByIntensity = (intensity?: ColorIntensity): number => {
+  return getIntensityConfig(intensity).shadowIntensity;
+};
+
+/**
+ * Obtiene la etiqueta de la intensidad
+ */
+export const getIntensityLabel = (intensity?: ColorIntensity): string => {
+  return getIntensityConfig(intensity).label;
+};
+
+// ========== FUNCIONES PARA FORMAS ==========
+
+/**
+ * Obtiene la configuración de forma de una nota
+ */
+export const getNoteShapeConfig = (shape?: NoteShape) => {
+  return NOTE_SHAPES.find(s => s.value === shape) || NOTE_SHAPES[1];
+};
+
+/**
+ * Obtiene la clase CSS para la forma de una nota
+ */
+export const getShapeClass = (shape?: NoteShape): string => {
+  const config = getNoteShapeConfig(shape);
+  return config.className;
+};
+
+/**
+ * Obtiene el icono de la forma como string
+ */
+export const getShapeIconName = (shape?: NoteShape): string => {
+  const config = getNoteShapeConfig(shape);
+  return config.icon;
+};
+
+/**
+ * Obtiene la etiqueta de la forma de una nota
+ */
+export const getShapeLabel = (shape?: NoteShape): string => {
+  const config = getNoteShapeConfig(shape);
+  return config.label;
+};
+
+/**
+ * Obtiene el borderRadius en píxeles según la forma
+ */
+export const getBorderRadiusByShape = (shape?: NoteShape): string => {
+  switch (shape) {
+    case 'square': return '0';
+    case 'rounded': return '0.75rem';
+    case 'oval': return '9999px';
+    case 'pill': return '9999px';
+    default: return '0.75rem';
+  }
+};
+
+// ========== FUNCIONES COMBINADAS ==========
+
+/**
+ * Obtiene todas las configuraciones de personalización de una nota
+ */
+export const getNotePersonalization = (note: Note) => {
+  return {
+    icon: getIconConfig(note.icon as NoteIcon),
+    size: getSizeConfig(note.size as NoteSize),
+    intensity: getIntensityConfig(note.colorIntensity as ColorIntensity),
+    shape: getNoteShapeConfig(note.shape as NoteShape),
+    color: note.color,
+  };
+};
+
+/**
+ * Obtiene un resumen de la personalización de una nota para mostrar en UI (como array de strings)
+ */
+export const getPersonalizationSummary = (note: Note): string[] => {
+  const summary: string[] = [];
   
-  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-};
-
-// Convertir string hex a número para operaciones aritméticas
-const hexToRgb = (hex: string): { r: number; g: number; b: number } | null => {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result ? {
-    r: parseInt(result[1], 16),
-    g: parseInt(result[2], 16),
-    b: parseInt(result[3], 16)
-  } : null;
-};
-
-// Obtener color de texto contrastante (blanco o negro) según el color de fondo
-export const getContrastTextColor = (backgroundColor: string): string => {
-  const rgb = hexToRgb(backgroundColor);
-  if (!rgb) return '#000000';
+  if (note.icon && note.icon !== 'default') {
+    summary.push(`✨ ${getNoteIconLabel(note.icon)}`);
+  }
+  if (note.size && note.size !== 'normal') {
+    summary.push(`📐 ${getSizeConfig(note.size).label}`);
+  }
+  if (note.colorIntensity && note.colorIntensity !== 'medium') {
+    summary.push(`💧 ${getIntensityConfig(note.colorIntensity).label}`);
+  }
+  if (note.shape && note.shape !== 'rounded') {
+    summary.push(`⬛ ${getShapeLabel(note.shape)}`);
+  }
   
-  // Calcular luminancia (fórmula W3C)
-  const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+  return summary;
+};
+
+/**
+ * Obtiene estadísticas de personalización de una colección de notas
+ */
+export const getPersonalizationStats = (notes: Note[]) => {
+  const activeNotes = notes.filter(n => !n.deleted_at && !n.is_archived);
   
-  return luminance > 0.5 ? '#000000' : '#FFFFFF';
-};
-
-// Ordenar notas por fecha (más recientes primero)
-export const sortNotesByDate = (notes: Note[]): Note[] => {
-  return [...notes].sort((a, b) => {
-    const dateA = new Date(a.updated_at || a.created_at || '').getTime();
-    const dateB = new Date(b.updated_at || b.created_at || '').getTime();
-    return dateB - dateA;
-  });
-};
-
-// Ordenar notas por fecha (más antiguas primero)
-export const sortNotesByDateAsc = (notes: Note[]): Note[] => {
-  return [...notes].sort((a, b) => {
-    const dateA = new Date(a.created_at || '').getTime();
-    const dateB = new Date(b.created_at || '').getTime();
-    return dateA - dateB;
-  });
-};
-
-// Ordenar notas por título
-export const sortNotesByTitle = (notes: Note[], ascending: boolean = true): Note[] => {
-  return [...notes].sort((a, b) => {
-    const comparison = a.title.localeCompare(b.title);
-    return ascending ? comparison : -comparison;
-  });
-};
-
-// Ordenar notas por favoritos primero
-export const sortNotesByFavorite = (notes: Note[]): Note[] => {
-  return [...notes].sort((a, b) => {
-    if (a.is_favorite === b.is_favorite) return 0;
-    return a.is_favorite ? -1 : 1;
-  });
-};
-
-// Ordenar notas por última actualización
-export const sortNotesByUpdated = (notes: Note[]): Note[] => {
-  return [...notes].sort((a, b) => {
-    const dateA = new Date(a.updated_at || a.created_at || '').getTime();
-    const dateB = new Date(b.updated_at || b.created_at || '').getTime();
-    return dateB - dateA;
-  });
-};
-
-// Filtrar notas por etiqueta
-export const filterNotesByTag = (notes: Note[], tag: string): Note[] => {
-  if (!tag) return notes;
-  return notes.filter(note => note.tags?.includes(tag));
-};
-
-// Filtrar notas activas (no eliminadas, no archivadas)
-export const filterActiveNotes = (notes: Note[]): Note[] => {
-  return notes.filter(note => !note.deleted_at && !note.is_archived);
-};
-
-// Filtrar notas archivadas
-export const filterArchivedNotes = (notes: Note[]): Note[] => {
-  return notes.filter(note => note.is_archived && !note.deleted_at);
-};
-
-// Filtrar notas favoritas
-export const filterFavoriteNotes = (notes: Note[]): Note[] => {
-  return notes.filter(note => note.is_favorite && !note.deleted_at && !note.is_archived);
-};
-
-// Filtrar notas eliminadas
-export const filterDeletedNotes = (notes: Note[]): Note[] => {
-  return notes.filter(note => note.deleted_at);
-};
-
-// Buscar notas por término
-export const searchNotesByTerm = (notes: Note[], term: string): Note[] => {
-  if (!term.trim()) return notes;
+  const iconsCount: Record<NoteIcon, number> = {
+    default: 0,
+    task: 0,
+    meeting: 0,
+    important: 0,
+    idea: 0,
+    shopping: 0,
+    call: 0,
+    email: 0,
+    document: 0,
+    travel: 0,
+    health: 0,
+    book: 0,
+    code: 0,
+  };
   
-  const lowerTerm = term.toLowerCase();
-  return notes.filter(note => 
-    note.title.toLowerCase().includes(lowerTerm) ||
-    note.content.toLowerCase().includes(lowerTerm) ||
-    note.tags?.some(tag => tag.toLowerCase().includes(lowerTerm))
-  );
+  const sizesCount: Record<NoteSize, number> = {
+    compact: 0,
+    normal: 0,
+    expanded: 0,
+  };
+  
+  const intensitiesCount: Record<ColorIntensity, number> = {
+    subtle: 0,
+    medium: 0,
+    intense: 0,
+  };
+  
+  const shapesCount: Record<NoteShape, number> = {
+    square: 0,
+    rounded: 0,
+    oval: 0,
+    pill: 0,
+  };
+  
+  activeNotes.forEach(note => {
+    if (note.icon) iconsCount[note.icon as NoteIcon]++;
+    else iconsCount.default++;
+    
+    if (note.size) sizesCount[note.size as NoteSize]++;
+    else sizesCount.normal++;
+    
+    if (note.colorIntensity) intensitiesCount[note.colorIntensity as ColorIntensity]++;
+    else intensitiesCount.medium++;
+    
+    if (note.shape) shapesCount[note.shape as NoteShape]++;
+    else shapesCount.rounded++;
+  });
+  
+  return {
+    icons: iconsCount,
+    sizes: sizesCount,
+    intensities: intensitiesCount,
+    shapes: shapesCount,
+  };
 };
 
-// Obtener estadísticas de notas
-export const getNotesStats = (notes: Note[]): {
-  total: number;
-  active: number;
-  archived: number;
-  favorite: number;
-  deleted: number;
-  withTags: number;
-  totalTags: number;
-} => {
-  const active = notes.filter(n => !n.deleted_at && !n.is_archived).length;
-  const archived = notes.filter(n => n.is_archived && !n.deleted_at).length;
-  const favorite = notes.filter(n => n.is_favorite && !n.is_archived && !n.deleted_at).length;
-  const deleted = notes.filter(n => n.deleted_at).length;
-  const withTags = notes.filter(n => n.tags && n.tags.length > 0).length;
-  const totalTags = new Set(notes.flatMap(n => n.tags || [])).size;
+/**
+ * Obtiene el estilo completo de una nota basado en todas sus propiedades (sin JSX)
+ */
+export const getNoteCompleteStyles = (
+  note: {
+    color: string;
+    shape?: NoteShape;
+    colorIntensity?: ColorIntensity;
+    size?: NoteSize;
+  }
+): React.CSSProperties => {
+  const shape = note.shape || 'rounded';
+  const intensity = note.colorIntensity || 'medium';
+  const intensityConfig = getIntensityConfig(intensity);
+  
+  let borderRadius = '0.75rem';
+  if (shape === 'square') borderRadius = '0';
+  if (shape === 'rounded') borderRadius = '0.75rem';
+  if (shape === 'oval') borderRadius = '9999px';
+  if (shape === 'pill') borderRadius = '9999px';
+  
+  return {
+    backgroundColor: getColorWithOpacity(note.color, intensityConfig.bgOpacity),
+    borderLeft: `4px solid ${getColorWithOpacity(note.color, intensityConfig.borderOpacity)}`,
+    boxShadow: `0 4px 12px ${getColorWithOpacity(note.color, intensityConfig.shadowIntensity)}`,
+    borderRadius,
+    transition: 'all 0.3s ease',
+  };
+};
 
+/**
+ * Obtiene el estilo de hover para una nota
+ */
+export const getNoteHoverStyles = (
+  color: string,
+  intensity: ColorIntensity = 'medium'
+): React.CSSProperties => {
+  const intensityConfig = getIntensityConfig(intensity);
+  return {
+    boxShadow: `0 8px 24px ${getColorWithOpacity(color, intensityConfig.shadowIntensity + 0.1)}`,
+    transform: 'translateY(-2px)',
+  };
+};
+
+// ========== FUNCIONES DE VALIDACIÓN ==========
+
+/**
+ * Valida si un icono es válido
+ */
+export const isValidIcon = (icon: string): icon is NoteIcon => {
+  return NOTE_ICONS.some(i => i.value === icon);
+};
+
+/**
+ * Valida si un tamaño es válido
+ */
+export const isValidSize = (size: string): size is NoteSize => {
+  return NOTE_SIZES.some(s => s.value === size);
+};
+
+/**
+ * Valida si una intensidad es válida
+ */
+export const isValidIntensity = (intensity: string): intensity is ColorIntensity => {
+  return COLOR_INTENSITIES.some(i => i.value === intensity);
+};
+
+/**
+ * Valida si una forma es válida
+ */
+export const isValidShape = (shape: string): shape is NoteShape => {
+  return NOTE_SHAPES.some(s => s.value === shape);
+};
+
+// ========== FUNCIONES DE NORMALIZACIÓN ==========
+
+/**
+ * Normaliza una nota asegurando que todas las propiedades tengan valores por defecto
+ */
+export const normalizeNote = <T extends Partial<Note>>(note: T): T => {
+  return {
+    ...note,
+    icon: note.icon && isValidIcon(note.icon) ? note.icon : 'default',
+    size: note.size && isValidSize(note.size) ? note.size : 'normal',
+    colorIntensity: note.colorIntensity && isValidIntensity(note.colorIntensity) ? note.colorIntensity : 'medium',
+    shape: note.shape && isValidShape(note.shape) ? note.shape : 'rounded',
+  };
+};
+
+// ========== FUNCIONES PARA ESTADÍSTICAS ==========
+
+/**
+ * Obtiene estadísticas completas de notas incluyendo personalización
+ */
+export const getFullNoteStats = (notes: Note[]) => {
+  const activeNotes = notes.filter(n => !n.deleted_at && !n.is_archived);
+  const archivedNotes = notes.filter(n => n.is_archived && !n.deleted_at);
+  const deletedNotes = notes.filter(n => n.deleted_at);
+  const favoriteNotes = notes.filter(n => n.is_favorite && !n.is_archived && !n.deleted_at);
+  
   return {
     total: notes.length,
-    active,
-    archived,
-    favorite,
-    deleted,
-    withTags,
-    totalTags,
+    active: activeNotes.length,
+    archived: archivedNotes.length,
+    deleted: deletedNotes.length,
+    favorite: favoriteNotes.length,
+    withTags: notes.filter(n => n.tags && n.tags.length > 0).length,
+    totalTags: new Set(notes.flatMap(n => n.tags || [])).size,
+    personalization: getPersonalizationStats(notes),
   };
+};
+
+// ========== EXPORTAR UTILIDADES AGRUPADAS ==========
+
+export const NoteUtilsExtended = {
+  // Formato
+  formatDateTime,
+  formatRelativeDate,
+  getInitials,
+  truncateText,
+  capitalizeWords,
+  countWords,
+  countCharacters,
+  
+  // Iconos
+  getNoteIconName,
+  getNoteIconLabel,
+  getNoteIconDescription,
+  getIconColorStyle,
+  isDefaultIcon,
+  getValidIcon,
+  isValidIcon,
+  
+  // Tamaños
+  getNoteSizeConfig,
+  getPaddingClassBySize,
+  getTitleSizeClassBySize,
+  getContentLinesBySize,
+  getMinHeightBySize,
+  getLineClampClassBySize,
+  getTitleFontSizeClass,
+  isValidSize,
+  
+  // Intensidades
+  getNoteIntensityConfig,
+  getBackgroundOpacityByIntensity,
+  getBorderOpacityByIntensity,
+  getShadowIntensityByIntensity,
+  getIntensityLabel,
+  isValidIntensity,
+  
+  // Formas
+  getNoteShapeConfig,
+  getShapeClass,
+  getShapeIconName,
+  getShapeLabel,
+  getBorderRadiusByShape,
+  isValidShape,
+  
+  // Combinadas
+  getNotePersonalization,
+  getPersonalizationSummary,
+  getPersonalizationStats,
+  getNoteCompleteStyles,
+  getNoteHoverStyles,
+  normalizeNote,
+  getFullNoteStats,
 };

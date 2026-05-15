@@ -1,6 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Note, getColorWithOpacity, NoteShape } from '../../../models/Note';
+import { 
+  Note, 
+  getColorWithOpacity, 
+  NoteShape,
+  // ========== NUEVAS IMPORTACIONES ==========
+  NOTE_ICONS,
+  NOTE_SIZES,
+  COLOR_INTENSITIES,
+  getIconConfig,
+  getSizeConfig,
+  getIntensityConfig,
+  NoteIcon,
+  NoteSize,
+  ColorIntensity
+} from '../../../models/Note';
 import { useTheme } from '../../../hooks/useTheme';
 import { getTagColor } from '../../../utils/tagUtils';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
@@ -13,7 +27,10 @@ import {
   Calendar,
   Tag as TagIcon,
   CheckCircle,
-  X
+  X,
+  Sparkles,
+  GripVertical,
+  Droplet
 } from 'lucide-react';
 
 interface NoteCardProps {
@@ -26,6 +43,59 @@ interface NoteCardProps {
   isSelected?: boolean;
   isGridMode?: boolean;
 }
+
+// Función para obtener el icono de la nota
+const getNoteIcon = (icon?: NoteIcon, size: string = "w-4 h-4") => {
+  const iconConfig = getIconConfig(icon);
+  if (iconConfig.value === 'default') {
+    return <Sparkles className={`${size} text-current`} />;
+  }
+  return <span className={`${size} text-center`}>{iconConfig.iconName}</span>;
+};
+
+// Obtener el tamaño de fuente del título según el tamaño de la nota
+const getTitleSizeClass = (size?: NoteSize): string => {
+  const sizeConfig = getSizeConfig(size);
+  return sizeConfig.titleSize;
+};
+
+// Obtener el padding según el tamaño de la nota
+const getPaddingClass = (size?: NoteSize): string => {
+  const sizeConfig = getSizeConfig(size);
+  return sizeConfig.padding;
+};
+
+// Obtener el número de líneas de contenido según el tamaño
+const getContentLinesClass = (size?: NoteSize): string => {
+  const sizeConfig = getSizeConfig(size);
+  return `line-clamp-${sizeConfig.contentLines}`;
+};
+
+// Obtener clase de forma CSS (actualizada)
+const getShapeClass = (shape: NoteShape): string => {
+  switch (shape) {
+    case 'square': return 'rounded-none';
+    case 'rounded': return 'rounded-xl';
+    case 'oval': return 'rounded-full aspect-video';
+    case 'pill': return 'rounded-full';
+    default: return 'rounded-xl';
+  }
+};
+
+// Obtener estilos completos para la tarjeta (color + intensidad)
+const getCardStyle = (color: string, intensity: ColorIntensity = 'medium', isDarkMode: boolean = false): React.CSSProperties => {
+  const intensityConfig = getIntensityConfig(intensity);
+  const opacity = intensityConfig.bgOpacity;
+  const borderOpacity = intensityConfig.borderOpacity;
+  const shadowIntensity = intensityConfig.shadowIntensity;
+  
+  return {
+    backgroundColor: getColorWithOpacity(color, opacity),
+    borderLeft: `4px solid ${getColorWithOpacity(color, borderOpacity)}`,
+    boxShadow: `0 4px 12px ${getColorWithOpacity(color, shadowIntensity)}`,
+    transition: 'all 0.3s ease',
+  };
+};
 
 const NoteCard: React.FC<NoteCardProps> = ({
   note,
@@ -47,35 +117,34 @@ const NoteCard: React.FC<NoteCardProps> = ({
     return note.color || '#3B82F6';
   };
 
-  // Obtener la forma de la nota (con valor por defecto si no existe)
+  // Obtener la forma de la nota
   const getNoteShape = (): NoteShape => {
     return (note.shape as NoteShape) || 'rounded';
   };
 
-  // Obtener clase de forma CSS
-  const getShapeClass = (): string => {
-    const shape = getNoteShape();
-    switch (shape) {
-      case 'square': return 'rounded-none';
-      case 'rounded': return 'rounded-2xl';
-      case 'oval': return 'rounded-full aspect-video';
-      case 'pill': return 'rounded-full';
-      default: return 'rounded-2xl';
-    }
+  // Obtener el icono de la nota
+  const getNoteIconValue = (): NoteIcon => {
+    return (note.icon as NoteIcon) || 'default';
   };
 
-  // Obtener estilos completos para la tarjeta (color tiñendo toda la nota)
-  const getCardStyle = (): React.CSSProperties => {
-    const color = getNoteColor();
-    const opacity = isDarkMode ? 0.12 : 0.08;
-    
-    return {
-      backgroundColor: getColorWithOpacity(color, opacity),
-      borderLeft: `4px solid ${color}`,
-      borderRight: isSelected ? `2px solid ${color}` : 'none',
-      boxShadow: `0 4px 12px ${getColorWithOpacity(color, 0.2)}`,
-      transition: 'all 0.3s ease',
-    };
+  // Obtener el tamaño de la nota
+  const getNoteSize = (): NoteSize => {
+    return (note.size as NoteSize) || 'normal';
+  };
+
+  // Obtener la intensidad de color
+  const getNoteIntensity = (): ColorIntensity => {
+    return (note.colorIntensity as ColorIntensity) || 'medium';
+  };
+
+  // Obtener clase de forma CSS
+  const getShapeClassName = (): string => {
+    return getShapeClass(getNoteShape());
+  };
+
+  // Obtener estilos completos
+  const getCardStyles = (): React.CSSProperties => {
+    return getCardStyle(getNoteColor(), getNoteIntensity(), isDarkMode);
   };
 
   const formatDate = (dateStr?: string | null): string => {
@@ -179,8 +248,13 @@ const NoteCard: React.FC<NoteCardProps> = ({
   };
 
   const noteColor = getNoteColor();
-  const noteShapeClass = getShapeClass();
+  const noteShapeClass = getShapeClassName();
   const formattedDate = formatDate(note.updated_at || note.created_at);
+  
+  // Obtener configuraciones de las nuevas propiedades
+  const iconConfig = getIconConfig(getNoteIconValue());
+  const sizeConfig = getSizeConfig(getNoteSize());
+  const intensityConfig = getIntensityConfig(getNoteIntensity());
 
   // Opciones del menú circular
   const menuItems = [
@@ -241,7 +315,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
     }
   };
 
-  // Variantes para la tarjeta (corregido el error de whileHover)
+  // Variantes para la tarjeta
   const cardVariants: Variants = {
     initial: { opacity: 0, scale: 0.9 },
     animate: { opacity: 1, scale: 1 },
@@ -269,28 +343,41 @@ const NoteCard: React.FC<NoteCardProps> = ({
           cursor-pointer
           ${!isGridMode ? 'flex items-start' : ''}
         `}
-        style={getCardStyle()}
+        style={getCardStyles()}
         onClick={onClick}
       >
         {isGridMode ? (
-          /* VISTA GRID - Color ahora tiñe toda la tarjeta */
+          /* VISTA GRID - Con todas las nuevas propiedades */
           <>
-            {/* Barra decorativa superior con el color */}
+            {/* Barra decorativa superior con el color e intensidad */}
             <div 
               className="h-1.5 w-full"
               style={{ 
-                background: `linear-gradient(90deg, ${noteColor}, ${noteColor}CC, ${noteColor})`,
+                background: `linear-gradient(90deg, ${noteColor}, ${getColorWithOpacity(noteColor, intensityConfig.borderOpacity)}, ${noteColor})`,
               }}
             />
 
-            <div className="p-5">
+            <div className={sizeConfig.padding}>
+              {/* Cabecera con icono y título */}
               <div className="flex items-start justify-between mb-3">
-                <h3 
-                  className={`font-bold text-lg truncate flex-1 pr-2 transition-colors duration-300`}
-                  style={{ color: isDarkMode ? '#fff' : noteColor }}
-                >
-                  {note.title || 'Sin título'}
-                </h3>
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  {/* Icono de la nota */}
+                  <div 
+                    className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ 
+                      backgroundColor: `${noteColor}30`,
+                      color: noteColor
+                    }}
+                  >
+                    {getNoteIcon(getNoteIconValue(), "w-3.5 h-3.5")}
+                  </div>
+                  <h3 
+                    className={`font-bold truncate flex-1 transition-colors duration-300 ${sizeConfig.titleSize}`}
+                    style={{ color: isDarkMode ? '#fff' : noteColor }}
+                  >
+                    {note.title || 'Sin título'}
+                  </h3>
+                </div>
                 
                 {/* Botón de tres puntitos */}
                 <motion.button
@@ -298,7 +385,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   onClick={handleOpenMenu}
-                  className="relative z-10 p-2.5 rounded-xl transition-all duration-300 flex-shrink-0"
+                  className="relative z-10 p-2 rounded-xl transition-all duration-300 flex-shrink-0"
                   style={{
                     backgroundColor: `${noteColor}20`,
                     color: noteColor,
@@ -308,18 +395,19 @@ const NoteCard: React.FC<NoteCardProps> = ({
                   aria-label="Abrir menú de opciones"
                   title="Opciones"
                 >
-                  <MoreVertical className="w-5 h-5" />
+                  <MoreVertical className="w-4 h-4" />
                 </motion.button>
               </div>
 
-              <p className={`text-sm line-clamp-3 mb-4 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+              {/* Contenido con número de líneas según tamaño */}
+              <p className={`text-sm ${getContentLinesClass(getNoteSize())} mb-4 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                 {note.content || 'Sin contenido'}
               </p>
 
               {/* Etiquetas */}
               {renderTags()}
 
-              {/* Fecha */}
+              {/* Fecha y metadata */}
               <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-200/50 dark:border-gray-700/50">
                 <div className="flex items-center gap-1.5">
                   <Calendar className={`w-3.5 h-3.5 ${isDarkMode ? 'text-gray-400' : 'text-gray-400'}`} />
@@ -327,26 +415,56 @@ const NoteCard: React.FC<NoteCardProps> = ({
                     {formattedDate}
                   </span>
                 </div>
+                
+                {/* Indicadores de personalización */}
+                <div className="flex items-center gap-1">
+                  {getNoteIconValue() !== 'default' && (
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: `${noteColor}20` }} title={`Icono: ${iconConfig.label}`}>
+                      {getNoteIcon(getNoteIconValue(), "w-2.5 h-2.5")}
+                    </div>
+                  )}
+                  {getNoteSize() !== 'normal' && (
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: `${noteColor}20` }} title={`Tamaño: ${sizeConfig.label}`}>
+                      <GripVertical className="w-2.5 h-2.5" style={{ color: noteColor }} />
+                    </div>
+                  )}
+                  {getNoteIntensity() !== 'medium' && (
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: `${noteColor}20` }} title={`Intensidad: ${intensityConfig.label}`}>
+                      <Droplet className="w-2.5 h-2.5" style={{ color: noteColor }} />
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </>
         ) : (
-          /* VISTA LISTA - Color ahora tiñe toda la tarjeta */
-          <div className="flex items-start p-4 w-full">
+          /* VISTA LISTA - Con todas las nuevas propiedades */
+          <div className={`flex items-start ${sizeConfig.padding} w-full`}>
             {/* Indicador de color - ahora más grande y visible */}
             <div 
               className="w-2 h-16 rounded-full mr-4 flex-shrink-0 transition-all duration-300"
               style={{ 
-                background: `linear-gradient(to bottom, ${noteColor}, ${noteColor}CC)`,
-                boxShadow: `0 2px 8px ${getColorWithOpacity(noteColor, 0.4)}`,
+                background: `linear-gradient(to bottom, ${noteColor}, ${getColorWithOpacity(noteColor, intensityConfig.borderOpacity)})`,
+                boxShadow: `0 2px 8px ${getColorWithOpacity(noteColor, intensityConfig.shadowIntensity)}`,
               }}
             />
+
+            {/* Icono de la nota */}
+            <div 
+              className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 mr-3"
+              style={{ 
+                backgroundColor: `${noteColor}20`,
+                color: noteColor
+              }}
+            >
+              {getNoteIcon(getNoteIconValue(), "w-5 h-5")}
+            </div>
 
             {/* Contenido */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-2 mb-1">
                 <h3 
-                  className={`font-semibold text-lg truncate transition-colors duration-300`}
+                  className={`font-semibold truncate transition-colors duration-300 ${sizeConfig.titleSize}`}
                   style={{ color: isDarkMode ? '#fff' : noteColor }}
                 >
                   {note.title || 'Sin título'}
@@ -372,7 +490,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
                 </motion.button>
               </div>
 
-              <p className={`text-sm line-clamp-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+              <p className={`text-sm ${getContentLinesClass(getNoteSize())} ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                 {note.content || 'Sin contenido'}
               </p>
 
@@ -385,6 +503,25 @@ const NoteCard: React.FC<NoteCardProps> = ({
                   <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                     {formattedDate}
                   </span>
+                </div>
+                
+                {/* Indicadores de personalización */}
+                <div className="flex items-center gap-1">
+                  {getNoteIconValue() !== 'default' && (
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: `${noteColor}20` }} title={`Icono: ${iconConfig.label}`}>
+                      {getNoteIcon(getNoteIconValue(), "w-2.5 h-2.5")}
+                    </div>
+                  )}
+                  {getNoteSize() !== 'normal' && (
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: `${noteColor}20` }} title={`Tamaño: ${sizeConfig.label}`}>
+                      <GripVertical className="w-2.5 h-2.5" style={{ color: noteColor }} />
+                    </div>
+                  )}
+                  {getNoteIntensity() !== 'medium' && (
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: `${noteColor}20` }} title={`Intensidad: ${intensityConfig.label}`}>
+                      <Droplet className="w-2.5 h-2.5" style={{ color: noteColor }} />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -402,7 +539,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
           </motion.div>
         )}
 
-        {/* Badge de forma (opcional - muestra qué forma tiene la nota) */}
+        {/* Badge de forma */}
         {getNoteShape() !== 'rounded' && (
           <div 
             className="absolute bottom-3 right-3 px-2 py-1 rounded-full text-xs font-medium backdrop-blur-sm"
@@ -411,7 +548,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
               color: noteColor,
               border: `1px solid ${noteColor}50`,
             }}
-            title={`Forma: ${getNoteShape() === 'square' ? 'Cuadrado' : getNoteShape() === 'oval' ? 'Ovalado' : 'Píldora'}`}
+            title={`Forma: ${getNoteShape() === 'square' ? 'Cuadrado' : getNoteShape() === 'oval' ? 'Ovalado' : getNoteShape() === 'pill' ? 'Píldora' : 'Esquinas redondas'}`}
           >
             {getNoteShape() === 'square' && '⬛'}
             {getNoteShape() === 'oval' && '🥚'}

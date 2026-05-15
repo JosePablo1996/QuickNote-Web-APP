@@ -6,12 +6,24 @@ import NoteForm from '../contexts/components/notes/NoteForm';
 import LoadingSpinner from '../contexts/components/ui/LoadingSpinner';
 import { Note, NoteCreate, NoteUpdate } from '../models/Note';
 import { motion } from 'framer-motion';
-import { ArrowLeft, AlertCircle, Sparkles, LayoutGrid } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Sparkles, LayoutGrid, CheckCircle } from 'lucide-react';
+import { useToast } from '../hooks/useToast';
+
+// ========== IMPORTACIONES DE NUEVAS PROPIEDADES ==========
+import {
+  NOTE_ICONS,
+  NOTE_SIZES,
+  COLOR_INTENSITIES,
+  getIconConfig,
+  getSizeConfig,
+  getIntensityConfig
+} from '../models/Note';
 
 const NoteFormPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isDarkMode } = useTheme();
+  const { success, error: showError, info } = useToast();
   const {
     getNoteById,
     createNote,
@@ -35,6 +47,13 @@ const NoteFormPage: React.FC = () => {
         try {
           const foundNote = getNoteById(id);
           console.log('📌 Nota encontrada:', foundNote);
+          console.log('🎨 Propiedades de personalización:', {
+            icon: foundNote?.icon,
+            size: foundNote?.size,
+            colorIntensity: foundNote?.colorIntensity,
+            shape: foundNote?.shape,
+            color: foundNote?.color
+          });
           
           if (foundNote) {
             setNote(foundNote);
@@ -62,16 +81,25 @@ const NoteFormPage: React.FC = () => {
     
     try {
       if (id && note) {
-        // MODO EDICIÓN - Incluir shape si existe
+        // MODO EDICIÓN - Incluir todas las nuevas propiedades
         console.log('✏️ Actualizando nota ID:', id);
         console.log('📝 Datos recibidos del formulario:', noteData);
+        console.log('🎨 Nuevas propiedades a actualizar:', {
+          icon: noteData.icon,
+          size: noteData.size,
+          colorIntensity: noteData.colorIntensity,
+          shape: noteData.shape
+        });
         
-        // Crear un objeto limpio con SOLO los campos permitidos incluyendo shape
+        // Crear un objeto limpio con TODOS los campos incluyendo las nuevas propiedades
         const cleanUpdateData: NoteUpdate = {
           title: noteData.title,
           content: noteData.content,
           color: noteData.color,
-          shape: noteData.shape, // Nueva propiedad
+          shape: noteData.shape,
+          icon: noteData.icon,
+          size: noteData.size,
+          colorIntensity: noteData.colorIntensity,
           is_favorite: noteData.is_favorite,
           is_archived: noteData.is_archived,
           tags: noteData.tags,
@@ -82,10 +110,24 @@ const NoteFormPage: React.FC = () => {
           cleanUpdateData.deleted_at = noteData.deleted_at;
         }
         
-        console.log('✅ Datos limpios a actualizar (con shape):', cleanUpdateData);
+        console.log('✅ Datos limpios a actualizar (con todas las propiedades):', cleanUpdateData);
         
         const updated = await updateNote(id, cleanUpdateData);
         if (updated) {
+          // Mostrar mensaje con los cambios aplicados
+          const changes = [];
+          if (noteData.icon !== note.icon) changes.push(`icono a ${getIconConfig(noteData.icon as any).label}`);
+          if (noteData.size !== note.size) changes.push(`tamaño a ${getSizeConfig(noteData.size as any).label}`);
+          if (noteData.colorIntensity !== note.colorIntensity) changes.push(`intensidad a ${getIntensityConfig(noteData.colorIntensity as any).label}`);
+          if (noteData.shape !== note.shape) changes.push(`forma a ${noteData.shape}`);
+          if (noteData.color !== note.color) changes.push(`color`);
+          
+          if (changes.length > 0) {
+            success(`✅ Nota actualizada exitosamente (${changes.join(', ')})`);
+          } else {
+            success('✅ Nota actualizada exitosamente');
+          }
+          
           console.log('✅ Nota actualizada exitosamente, redirigiendo a:', `/notes/${id}`);
           navigate(`/notes/${id}`);
         } else {
@@ -93,22 +135,32 @@ const NoteFormPage: React.FC = () => {
           setIsSubmitting(false);
         }
       } else {
-        // MODO CREACIÓN - Incluir shape
+        // MODO CREACIÓN - Incluir todas las nuevas propiedades
         console.log('➕ Creando nueva nota con datos:', noteData);
+        console.log('🎨 Nuevas propiedades a crear:', {
+          icon: noteData.icon,
+          size: noteData.size,
+          colorIntensity: noteData.colorIntensity,
+          shape: noteData.shape
+        });
         
-        // Extraer user_id si existe y crear objeto limpio con shape
+        // Extraer user_id si existe y crear objeto limpio con todas las propiedades
         const { user_id, ...cleanCreateData } = noteData as any;
         
-        // Asegurar que shape tenga un valor por defecto si no viene
-        const createDataWithShape = {
+        // Asegurar que todas las propiedades tengan valores por defecto si no vienen
+        const createDataWithDefaults = {
           ...cleanCreateData,
           shape: cleanCreateData.shape || 'rounded',
+          icon: cleanCreateData.icon || 'default',
+          size: cleanCreateData.size || 'normal',
+          colorIntensity: cleanCreateData.colorIntensity || 'medium',
         };
         
-        console.log('✅ Datos limpios a crear (con shape):', createDataWithShape);
+        console.log('✅ Datos limpios a crear (con todas las propiedades):', createDataWithDefaults);
         
-        const created = await createNote(createDataWithShape as NoteCreate);
+        const created = await createNote(createDataWithDefaults as NoteCreate);
         if (created) {
+          success(`✅ Nota creada exitosamente con ${getIconConfig(created.icon as any).label} icono, ${getSizeConfig(created.size as any).label} tamaño y ${getIntensityConfig(created.colorIntensity as any).label} intensidad`);
           console.log('✅ Nota creada exitosamente con ID:', created.id);
           navigate(`/notes/${created.id}`);
         } else {
@@ -140,6 +192,41 @@ const NoteFormPage: React.FC = () => {
     );
   }
 
+  // Obtener información de personalización para mostrar en la UI (si existe la nota)
+  const getPersonalizationBadges = () => {
+    if (!note) return null;
+    
+    const iconConfig = getIconConfig(note.icon as any);
+    const sizeConfig = getSizeConfig(note.size as any);
+    const intensityConfig = getIntensityConfig(note.colorIntensity as any);
+    
+    return (
+      <div className="flex flex-wrap gap-2 mt-2">
+        {note.icon && note.icon !== 'default' && (
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+            <span className="text-sm">{iconConfig.iconName}</span>
+            {iconConfig.label}
+          </span>
+        )}
+        {note.size && note.size !== 'normal' && (
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">
+            📐 {sizeConfig.label}
+          </span>
+        )}
+        {note.colorIntensity && note.colorIntensity !== 'medium' && (
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
+            💧 {intensityConfig.label}
+          </span>
+        )}
+        {note.shape && note.shape !== 'rounded' && (
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400">
+            ⬛ {note.shape === 'square' ? 'Cuadrado' : note.shape === 'oval' ? 'Ovalado' : 'Píldora'}
+          </span>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className={`min-h-screen transition-colors duration-300 ${
       isDarkMode 
@@ -165,7 +252,7 @@ const NoteFormPage: React.FC = () => {
         </motion.button>
       </motion.div>
 
-      {/* Badge flotante de estado - Nuevo */}
+      {/* Badge flotante de estado - Mejorado */}
       {id && note && (
         <motion.div
           initial={{ opacity: 0, x: 20 }}
@@ -221,9 +308,12 @@ const NoteFormPage: React.FC = () => {
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2 max-w-md mx-auto">
             {id 
-              ? 'Modifica el contenido, color y forma de tu nota' 
-              : 'Personaliza tu nota con colores, formas y etiquetas'}
+              ? 'Modifica el contenido, color, forma y personalización de tu nota' 
+              : 'Personaliza tu nota con colores, formas, iconos, tamaños y etiquetas'}
           </p>
+          
+          {/* Mostrar badges de personalización actual */}
+          {id && note && getPersonalizationBadges()}
         </motion.div>
 
         {/* Formulario de nota - Ahora con layout de 2 columnas incluido */}
@@ -240,7 +330,7 @@ const NoteFormPage: React.FC = () => {
           />
         </motion.div>
 
-        {/* Mensaje de ayuda - Nuevo */}
+        {/* Mensaje de ayuda - Actualizado con nuevas características */}
         {!id && !error && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -249,34 +339,72 @@ const NoteFormPage: React.FC = () => {
             className="mt-8 text-center"
           >
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              💡 <span className="font-medium">Tip:</span> Puedes personalizar el color y la forma de tu nota en el panel derecho.
-              Las notas con diferentes formas se ven únicas en tu colección.
+              💡 <span className="font-medium">Tip:</span> Puedes personalizar tu nota con:
             </p>
+            <div className="flex flex-wrap justify-center gap-3 mt-2 text-xs text-gray-400 dark:text-gray-500">
+              <span className="inline-flex items-center gap-1">🎨 <span>Colores</span></span>
+              <span className="inline-flex items-center gap-1">⬛ <span>Formas</span></span>
+              <span className="inline-flex items-center gap-1">✨ <span>Iconos</span></span>
+              <span className="inline-flex items-center gap-1">📐 <span>Tamaños</span></span>
+              <span className="inline-flex items-center gap-1">💧 <span>Intensidad de color</span></span>
+            </div>
           </motion.div>
         )}
 
-        {/* Información de características - Nueva para notas existentes */}
+        {/* Información de características - Actualizada para notas existentes */}
         {id && note && !error && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.3 }}
-            className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-2xl mx-auto"
+            className="mt-8 grid grid-cols-1 sm:grid-cols-4 gap-3 max-w-3xl mx-auto"
           >
             <div className="text-center p-2 rounded-lg bg-gray-100/50 dark:bg-gray-800/50 backdrop-blur-sm">
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                🎨 <span className="font-medium">Color actual:</span> {note.color}
+                🎨 <span className="font-medium">Color:</span> {note.color}
               </p>
             </div>
             <div className="text-center p-2 rounded-lg bg-gray-100/50 dark:bg-gray-800/50 backdrop-blur-sm">
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                ⬛ <span className="font-medium">Forma actual:</span> {note.shape || 'rounded'}
+                ⬛ <span className="font-medium">Forma:</span> {note.shape || 'rounded'}
+              </p>
+            </div>
+            <div className="text-center p-2 rounded-lg bg-gray-100/50 dark:bg-gray-800/50 backdrop-blur-sm">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                ✨ <span className="font-medium">Icono:</span> {getIconConfig(note.icon as any).label}
+              </p>
+            </div>
+            <div className="text-center p-2 rounded-lg bg-gray-100/50 dark:bg-gray-800/50 backdrop-blur-sm">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                📐 <span className="font-medium">Tamaño:</span> {getSizeConfig(note.size as any).label}
+              </p>
+            </div>
+            <div className="text-center p-2 rounded-lg bg-gray-100/50 dark:bg-gray-800/50 backdrop-blur-sm">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                💧 <span className="font-medium">Intensidad:</span> {getIntensityConfig(note.colorIntensity as any).label}
               </p>
             </div>
             <div className="text-center p-2 rounded-lg bg-gray-100/50 dark:bg-gray-800/50 backdrop-blur-sm">
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 🏷️ <span className="font-medium">Etiquetas:</span> {note.tags?.length || 0}
               </p>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Preview de cómo se verá la nota - Solo en creación */}
+        {!id && !error && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+            className="mt-6 text-center"
+          >
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20">
+              <CheckCircle className="w-4 h-4 text-green-500" />
+              <span className="text-xs text-gray-600 dark:text-gray-400">
+                Todas las opciones de personalización están disponibles en el panel derecho
+              </span>
             </div>
           </motion.div>
         )}
