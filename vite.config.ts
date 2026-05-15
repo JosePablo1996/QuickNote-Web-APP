@@ -7,14 +7,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export default defineConfig(({ command, mode }) => {
+  // Detectar si es producción
   const isProduction = mode === 'production' || command === 'build';
   
-  // ✅ CORREGIDO: Puerto correcto para desarrollo (3001)
-  const apiTarget = isProduction 
-    ? process.env.VITE_API_URL || 'https://quicknote-api-app-react.onrender.com'
-    : 'http://localhost:3001';  // ← Cambiado de 8000 a 3001
+  console.log(`🔧 Vite config - Modo: ${mode}, Producción: ${isProduction}`);
 
-  return {
+  // Configuración base (común para desarrollo y producción)
+  const baseConfig = {
     plugins: [react()],
     root: __dirname,
     publicDir: path.resolve(__dirname, 'public'),
@@ -38,37 +37,41 @@ export default defineConfig(({ command, mode }) => {
       },
       chunkSizeWarningLimit: 2000,
     },
+    define: {
+      __APP_ENV__: JSON.stringify(mode),
+    },
+  };
+
+  // Si es producción, no agregar configuración de servidor
+  if (isProduction) {
+    return baseConfig;
+  }
+
+  // En desarrollo, agregar configuración de servidor con proxy
+  return {
+    ...baseConfig,
     server: {
       port: 5173,
       proxy: {
-        // ✅ Proxy para todas las rutas /api
         '/api': {
-          target: apiTarget,
+          target: 'http://localhost:3001',
           changeOrigin: true,
-          // No rewrite: mantener la ruta /api/v1/...
-          // Asegurar que WebSocket también funciona
+          secure: false,
           ws: true,
-        },
-        // ✅ Proxy adicional para auth (por si acaso)
-        '/auth': {
-          target: apiTarget,
-          changeOrigin: true,
-        },
-        // ✅ Proxy para passkeys
-        '/passkeys': {
-          target: apiTarget,
-          changeOrigin: true,
+          configure: (proxy, _options) => {
+            proxy.on('error', (err, _req, _res) => {
+              console.log('⚠️ Proxy error:', err.message);
+            });
+            proxy.on('proxyReq', (proxyReq, req, _res) => {
+              console.log('🔄 Proxy:', req.method, req.url);
+            });
+          },
         },
       },
-      // Configuración CORS para desarrollo
       cors: {
         origin: ['http://localhost:5173', 'http://localhost:3001'],
         credentials: true,
       },
-    },
-    // Variables de entorno para el frontend
-    define: {
-      __APP_ENV__: JSON.stringify(mode),
     },
   };
 });

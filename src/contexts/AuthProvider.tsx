@@ -22,7 +22,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const toast = useToast();
 
   // ============================================
-  // CONFIGURACIÓN DE URLs (CORREGIDO)
+  // CONFIGURACIÓN DE URLs (CORREGIDO PARA USAR PROXY)
   // ============================================
 
   // Detectar entorno de desarrollo
@@ -31,31 +31,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Obtener URL base de la API (sin /api/v1)
   const getApiBaseUrl = (): string => {
-    // En desarrollo, usar variable de entorno (localhost:3001)
-    // En producción, usar variable de entorno (URL de Render)
+    // ✅ CLAVE: En desarrollo: usar ruta VACÍA para que Vite use el proxy
+    if (isDevelopment) {
+      console.log('🔧 Desarrollo: usando proxy de Vite (ruta relativa)');
+      return '';  // 👈 IMPORTANTE: vacío, NO 'http://localhost:3001'
+    }
+    
+    // En producción: usar variable de entorno
     const url = import.meta.env.VITE_API_URL;
     if (!url) {
-      console.warn('⚠️ VITE_API_URL no está definida');
-      return isDevelopment ? 'http://localhost:3001' : 'https://quicknote-api-app-react.onrender.com';
+      console.warn('⚠️ VITE_API_URL no definida, usando URL por defecto');
+      return 'https://quicknote-api-app-react.onrender.com';
     }
     // Eliminar /api/v1 del final si existe (por si acaso)
-    return url.replace(/\/api\/v1\/?$/, '');
+    const cleanUrl = url.replace(/\/api\/v1\/?$/, '');
+    console.log('🔧 Producción: usando URL base', cleanUrl);
+    return cleanUrl;
   };
 
   // Construir URL completa agregando /api/v1
   const buildApiUrl = (path: string): string => {
     const baseUrl = getApiBaseUrl();
-    // Asegurar que path comience con /
     const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-    // Asegurar que baseUrl no tenga barra al final
+    
+    if (baseUrl === '') {
+      // En desarrollo: ruta relativa (el proxy la intercepta)
+      console.log(`🔧 Proxy: usando ruta relativa ${normalizedPath}`);
+      return normalizedPath;
+    }
+    
     const normalizedBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-    return `${normalizedBase}${normalizedPath}`;
+    const fullUrl = `${normalizedBase}${normalizedPath}`;
+    console.log(`🔧 Directo: ${fullUrl}`);
+    return fullUrl;
   };
 
   console.log('🔧 Configuración de API:', {
     isDevelopment,
     baseUrl: getApiBaseUrl(),
-    apiUrl: buildApiUrl('/api/v1/auth/login')
+    exampleUrl: buildApiUrl('/api/v1/auth/login')
   });
 
   // ============================================
