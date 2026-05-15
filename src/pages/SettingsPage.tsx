@@ -19,6 +19,33 @@ import { TwoFactorSetup } from '../contexts/components/auth/TwoFactorSetup';
 import { api, PasskeyCredential } from '../services/api';
 
 // ============================================
+// FUNCIÓN PARA DETECTAR SI ESTAMOS EN PRODUCCIÓN
+// ============================================
+
+const isProduction = (): boolean => {
+  // Detectar si es producción (no localhost, no 127.0.0.1, no 192.168.x.x)
+  const hostname = window.location.hostname;
+  const isLocalhost = hostname === 'localhost' || 
+                      hostname === '127.0.0.1' || 
+                      hostname.startsWith('192.168.') ||
+                      hostname.startsWith('10.') ||
+                      hostname.endsWith('.local');
+  
+  // También verificar si la URL contiene 'onrender.com' (dominio de producción de Render)
+  const isRenderProduction = window.location.hostname.includes('onrender.com');
+  
+  // También verificar variable de entorno
+  const isEnvProduction = process.env.NODE_ENV === 'production';
+  
+  // Si es Render o si es producción y no es localhost
+  const result = !isLocalhost && (isRenderProduction || isEnvProduction);
+  
+  console.log(`🔍 Modo: ${result ? 'PRODUCCIÓN' : 'DESARROLLO'} (hostname: ${hostname})`);
+  
+  return result;
+};
+
+// ============================================
 // COMPONENTES AUXILIARES
 // ============================================
 
@@ -319,7 +346,7 @@ const LogoutModal: React.FC<{
 };
 
 // ============================================
-// COMPONENTE: PASSKEY MANAGEMENT SECTION (RESPONSIVE)
+// COMPONENTE: PASSKEY MANAGEMENT SECTION (SOLO DESARROLLO)
 // ============================================
 
 const PasskeyManagementSection: React.FC = () => {
@@ -703,7 +730,7 @@ const PasskeyManagementSection: React.FC = () => {
 };
 
 // ============================================
-// COMPONENTE: 2FA MANAGEMENT SECTION (RESPONSIVE)
+// COMPONENTE: 2FA MANAGEMENT SECTION
 // ============================================
 
 const TwoFactorManagementSection: React.FC = () => {
@@ -949,6 +976,15 @@ const SettingsPage: React.FC = () => {
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
   const [showPasswordDropdown, setShowPasswordDropdown] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  
+  // ✅ Detectar si estamos en producción
+  const [showPasskeys, setShowPasskeys] = useState(false);
+  
+  useEffect(() => {
+    // Mostrar passkeys solo en desarrollo
+    const prod = isProduction();
+    setShowPasskeys(!prod);
+  }, []);
 
   const sortOptions = [
     'Fecha de modificacion',
@@ -1118,12 +1154,14 @@ const SettingsPage: React.FC = () => {
             </AnimatePresence>
           </div>
 
-          {/* Passkey Manager */}
-          <div className="w-full p-4 border-b border-gray-200 dark:border-gray-700">
-            <PasskeyManagementSection />
-          </div>
+          {/* ✅ Passkey Manager - SOLO EN DESARROLLO */}
+          {showPasskeys && (
+            <div className="w-full p-4 border-b border-gray-200 dark:border-gray-700">
+              <PasskeyManagementSection />
+            </div>
+          )}
 
-          {/* 2FA Manager */}
+          {/* 2FA Manager - SIEMPRE VISIBLE */}
           <div className="w-full p-4 border-b border-gray-200 dark:border-gray-700">
             <TwoFactorManagementSection />
           </div>
