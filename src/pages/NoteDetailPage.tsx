@@ -27,7 +27,6 @@ import {
   GripVertical,
   Droplet
 } from "lucide-react";
-import ExportButton from "../contexts/components/export/ExportButton";
 import { useExport } from "../hooks/useExport";
 import { useToast } from "../hooks/useToast";
 
@@ -552,63 +551,50 @@ const NoteDetailPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-      {/* Botón flotante para volver */}
-      <motion.div
+      {/* Botón flotante de regresar en esquina superior izquierda */}
+      <motion.button
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
-        className="fixed top-4 left-4 z-10 flex gap-2"
+        transition={{ duration: 0.3 }}
+        whileHover={{ scale: 1.05, x: -2 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={() => navigate("/notes")}
+        className="fixed top-4 left-4 z-50 p-3 rounded-xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl transition-all"
+        title="Volver a notas"
+        aria-label="Volver a notas"
       >
-        <motion.button
-          whileHover={{ scale: 1.05, x: -2 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => navigate("/notes")}
-          className="p-3 rounded-xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border border-white/30 dark:border-gray-700/30 shadow-lg hover:shadow-xl transition-all"
-          aria-label="Volver a notas"
-        >
-          <ArrowLeft className="w-5 h-5 text-gray-700 dark:text-gray-300" />
-        </motion.button>
+        <ArrowLeft className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+      </motion.button>
 
-        {/* Botón para ver personalización - NUEVO */}
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={handleViewPersonalization}
-          className="p-3 rounded-xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border border-white/30 dark:border-gray-700/30 shadow-lg hover:shadow-xl transition-all"
-          title="Ver personalización de la nota"
-          aria-label="Ver personalización"
-        >
-          <Sparkles className="w-5 h-5 text-gray-700 dark:text-gray-300" />
-        </motion.button>
-      </motion.div>
-
-      {/* Botón flotante de compartir */}
-      <motion.div
+      {/* Botón flotante de compartir en esquina superior derecha */}
+      <motion.button
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
-        className="fixed top-4 right-4 z-10 flex gap-2"
+        transition={{ duration: 0.3, delay: 0.1 }}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={handleShare}
+        className="fixed top-4 right-4 z-50 p-3 rounded-xl bg-blue-100 dark:bg-blue-900/30 backdrop-blur-xl border border-blue-200 dark:border-blue-800 shadow-lg hover:shadow-xl transition-all"
+        title="Compartir nota"
+        aria-label="Compartir nota"
       >
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={handleShare}
-          className="p-3 rounded-xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border border-white/30 dark:border-gray-700/30 shadow-lg hover:shadow-xl transition-all"
-          title="Compartir nota"
-          aria-label="Compartir nota"
-        >
-          <Share2 className="w-5 h-5 text-gray-700 dark:text-gray-300" />
-        </motion.button>
+        <Share2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+      </motion.button>
 
-        <ExportButton
-          variant="icon"
-          size="md"
-          notesToExport={[note]}
-          onExportComplete={(result) => {
-            if (result.success) {
-              success(`✅ Nota exportada como ${result.filename}`);
-            }
-          }}
-        />
-      </motion.div>
+      {/* Botón flotante de personalización */}
+      <motion.button
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.2 }}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={handleViewPersonalization}
+        className="fixed bottom-4 right-4 z-50 p-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg hover:shadow-xl transition-all"
+        title="Ver personalización"
+        aria-label="Ver personalización"
+      >
+        <Sparkles className="w-5 h-5" />
+      </motion.button>
 
       <NoteDetail
         note={note}

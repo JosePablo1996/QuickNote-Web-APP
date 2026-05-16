@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTheme } from '../../../hooks/useTheme';
 import { useAuth } from '../../../hooks/useAuth';
-import { Menu, MoreVertical, Sun, Moon, Edit } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Menu, MoreVertical, Sun, Moon, Edit, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import GreetingWidget from '../ui/GreetingWidget';
 
 interface HeaderProps {
@@ -22,140 +22,212 @@ const Header: React.FC<HeaderProps> = ({
 }) => {
   const { isDarkMode, toggleTheme } = useTheme();
   const { user } = useAuth();
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+
+  // Detectar ancho de pantalla
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const isMobile = windowWidth < 640;
+  const isTablet = windowWidth >= 640 && windowWidth < 768;
+
+  // Logo pequeño y compacto
+  const LogoSVG = () => (
+    <motion.div
+      initial={{ opacity: 0, y: -5 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex items-center gap-1.5 sm:gap-2"
+    >
+      {/* Icono pequeño */}
+      <div className="relative">
+        <div className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-lg sm:rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 shadow-md flex items-center justify-center">
+          <Edit className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 text-white" />
+        </div>
+      </div>
+      
+      {/* Texto del logo compacto */}
+      <div className="flex flex-col">
+        <h1 className="text-base sm:text-lg md:text-xl font-bold tracking-tight leading-tight">
+          <span className="bg-gradient-to-r from-amber-200 via-white to-blue-200 bg-clip-text text-transparent">
+            Quick
+          </span>
+          <span className="bg-gradient-to-r from-blue-200 via-purple-200 to-pink-200 bg-clip-text text-transparent">
+            Note
+          </span>
+        </h1>
+        <div className="h-0.5 w-8 sm:w-10 md:w-12 bg-gradient-to-r from-amber-400 to-blue-400 rounded-full mt-0.5"></div>
+      </div>
+    </motion.div>
+  );
 
   return (
     <header className="relative">
-      {/* Header principal con estilo glassmorphism */}
       <div className="relative overflow-hidden">
-        {/* Fondo con gradiente y efecto glass */}
+        {/* Fondo más sutil */}
         <div className="absolute inset-0 bg-gradient-to-r from-blue-600/90 via-purple-600/90 to-pink-600/90 dark:from-blue-800/90 dark:via-purple-800/90 dark:to-pink-800/90 backdrop-blur-md"></div>
         
-        {/* Efectos decorativos */}
-        <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
-        <div className="absolute -top-24 -right-24 w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-purple-400/20 rounded-full blur-3xl"></div>
+        {/* Efectos decorativos reducidos */}
+        <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent"></div>
+        <div className="absolute -top-32 -right-32 w-32 h-32 bg-white/5 rounded-full blur-2xl"></div>
+        <div className="absolute -bottom-32 -left-32 w-32 h-32 bg-purple-400/10 rounded-full blur-2xl"></div>
         
-        {/* Contenido */}
-        <div className="relative z-10 px-4 py-4">
-          {/* Fila superior */}
-          <div className="flex items-center justify-between mb-4">
-            {/* Botón izquierdo (menú) */}
+        {/* Contenido compacto */}
+        <div className="relative z-10 px-3 py-2 sm:px-4 sm:py-2.5">
+          
+          {/* Fila superior compacta */}
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            
+            {/* Botón izquierdo más pequeño */}
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={onLeftMenuTap}
-              className="p-2.5 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl transition-all duration-200 border border-white/30"
+              className="p-1.5 sm:p-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg transition-all duration-200 border border-white/30"
               aria-label="Abrir menú principal"
-              title="Menú principal"
             >
-              <Menu className="w-5 h-5 text-white" />
+              <Menu className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
             </motion.button>
 
-            {/* Logo y nombre de la app */}
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-3"
-            >
-              {/* Icono de notas estilizado */}
-              <div className="relative">
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 shadow-xl flex items-center justify-center transform -rotate-6 hover:rotate-0 transition-transform duration-300">
-                  <Edit className="w-5 h-5 text-white" />
-                </div>
-                <div className="absolute -bottom-1 -right-1 w-10 h-10 rounded-2xl bg-black/20 blur-sm -z-10"></div>
-              </div>
-              
-              {/* Texto del logo con gradiente */}
-              <div className="flex flex-col">
-                <h1 className="text-3xl font-extrabold tracking-tight">
-                  <span className="bg-gradient-to-r from-amber-200 via-white to-blue-200 bg-clip-text text-transparent drop-shadow-lg">
-                    Quick
-                  </span>
-                  <span className="bg-gradient-to-r from-blue-200 via-purple-200 to-pink-200 bg-clip-text text-transparent drop-shadow-lg">
-                    Note
-                  </span>
-                </h1>
-                <div className="h-0.5 w-16 bg-gradient-to-r from-amber-400 to-blue-400 rounded-full mt-1"></div>
-              </div>
-            </motion.div>
+            {/* Logo - centrado solo en móvil muy pequeño */}
+            <div className={windowWidth < 480 ? "absolute left-1/2 transform -translate-x-1/2" : ""}>
+              <LogoSVG />
+            </div>
 
-            {/* Botones derecho */}
-            <div className="flex items-center gap-2">
-              {/* Theme Toggle */}
-              <motion.button
-                whileHover={{ scale: 1.05, rotate: 15 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={toggleTheme}
-                className="p-2.5 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl transition-all duration-200 border border-white/30"
-                aria-label="Cambiar tema"
-                title={isDarkMode ? 'Modo claro' : 'Modo oscuro'}
-              >
-                {isDarkMode ? (
-                  <Sun className="w-5 h-5 text-white" />
-                ) : (
-                  <Moon className="w-5 h-5 text-white" />
-                )}
-              </motion.button>
-
-              {/* Botón derecho (menú de opciones) */}
+            {/* Botones derecha compactos */}
+            <div className="flex items-center gap-1 sm:gap-1.5">
+              {/* Theme Toggle más pequeño */}
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={onRightMenuTap}
-                className="p-2.5 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl transition-all duration-200 border border-white/30"
-                aria-label="Abrir menú de opciones"
-                title="Menú de opciones"
+                onClick={toggleTheme}
+                className="p-1.5 sm:p-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg transition-all duration-200 border border-white/30"
+                aria-label="Cambiar tema"
               >
-                <MoreVertical className="w-5 h-5 text-white" />
+                {isDarkMode ? (
+                  <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
+                ) : (
+                  <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
+                )}
               </motion.button>
+
+              {/* Botón right menu - solo tablet/desktop */}
+              {!isMobile && (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={onRightMenuTap}
+                  className="p-1.5 sm:p-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg transition-all duration-200 border border-white/30"
+                  aria-label="Abrir menú de opciones"
+                >
+                  <MoreVertical className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
+                </motion.button>
+              )}
+
+              {/* Botón menú móvil para opciones */}
+              {isMobile && (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setShowMobileMenu(!showMobileMenu)}
+                  className="p-1.5 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg transition-all duration-200 border border-white/30"
+                >
+                  {showMobileMenu ? (
+                    <X className="w-3.5 h-3.5 text-white" />
+                  ) : (
+                    <MoreVertical className="w-3.5 h-3.5 text-white" />
+                  )}
+                </motion.button>
+              )}
             </div>
           </div>
 
-          {/* Widget de saludo - con diseño centrado y glassmorphism */}
-          <div className="mb-4">
+          {/* Menú móvil compacto */}
+          <AnimatePresence>
+            {isMobile && showMobileMenu && (
+              <motion.div
+                initial={{ opacity: 0, y: -10, height: 0 }}
+                animate={{ opacity: 1, y: 0, height: 'auto' }}
+                exit={{ opacity: 0, y: -10, height: 0 }}
+                transition={{ duration: 0.2 }}
+                className="mb-2 overflow-hidden"
+              >
+                <div className="flex gap-2 p-2 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
+                  <button
+                    onClick={() => {
+                      onRightMenuTap();
+                      setShowMobileMenu(false);
+                    }}
+                    className="flex-1 text-center px-2 py-1.5 bg-white/10 hover:bg-white/20 rounded-md transition-colors text-white text-xs"
+                  >
+                    📋 Opciones
+                  </button>
+                  <button
+                    onClick={() => {
+                      toggleTheme();
+                      setShowMobileMenu(false);
+                    }}
+                    className="flex-1 text-center px-2 py-1.5 bg-white/10 hover:bg-white/20 rounded-md transition-colors text-white text-xs"
+                  >
+                    {isDarkMode ? '☀️ Claro' : '🌙 Oscuro'}
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Widget de saludo con márgenes reducidos */}
+          <div className="mb-2 sm:mb-3">
             <GreetingWidget 
               userName={user?.name}
               userAvatar={user?.avatar}
             />
           </div>
 
-          {/* Dropdown de etiquetas */}
-          <div className="px-2">
-            <label htmlFor="category-select" className="sr-only">
-              Seleccionar categoría de notas
-            </label>
+          {/* Selector de etiquetas compacto */}
+          <div className="px-0 sm:px-1">
             <div className="relative">
               <select
                 id="category-select"
                 value={selectedCategory}
                 onChange={(e) => onCategorySelected(e.target.value)}
-                className="w-full px-4 py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl text-white appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-white/50 transition-all duration-200"
+                className="w-full px-3 py-2 sm:px-3.5 sm:py-2.5 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-white text-xs sm:text-sm appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-white/50 transition-all duration-200"
                 style={{
                   backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath strokeLinecap='round' strokeLinejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
                   backgroundRepeat: 'no-repeat',
-                  backgroundPosition: 'right 1rem center',
-                  backgroundSize: '1.2rem',
+                  backgroundPosition: 'right 0.75rem center',
+                  backgroundSize: '0.9rem',
+                  paddingRight: '2rem',
                 }}
               >
-                <option value="Todas" className="bg-gray-800 text-white">📋 Todas las notas</option>
-                {availableTags.map((tag) => (
-                  <option key={tag} value={tag} className="bg-gray-800 text-white">
+                <option value="Todas" className="bg-gray-800 text-white text-xs sm:text-sm">
+                  📋 Todas las notas
+                </option>
+                {availableTags.slice(0, isMobile ? 10 : 30).map((tag) => (
+                  <option key={tag} value={tag} className="bg-gray-800 text-white text-xs sm:text-sm">
                     🏷️ {tag}
                   </option>
                 ))}
+                {availableTags.length > (isMobile ? 10 : 30) && (
+                  <option disabled className="bg-gray-800 text-gray-400 text-xs sm:text-sm">
+                    + {availableTags.length - (isMobile ? 10 : 30)} más
+                  </option>
+                )}
               </select>
             </div>
           </div>
 
-          {/* Mensaje si no hay etiquetas */}
+          {/* Mensaje sin etiquetas más compacto */}
           {availableTags.length === 0 && (
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="text-xs text-center mt-3 italic text-white/60"
-              role="status"
+              className="text-[11px] sm:text-xs text-center mt-1.5 sm:mt-2 italic text-white/50"
             >
-              No hay etiquetas disponibles
+              No hay etiquetas
             </motion.p>
           )}
         </div>

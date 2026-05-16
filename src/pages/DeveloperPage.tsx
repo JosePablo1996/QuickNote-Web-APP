@@ -37,6 +37,9 @@ import {
   HardDrive
 } from 'lucide-react';
 
+// Importar el avatar local
+import developerAvatar from '../assets/developer-avatar.png';
+
 const DeveloperPage: React.FC = () => {
   const navigate = useNavigate();
   const { isDarkMode } = useTheme();
@@ -110,31 +113,31 @@ const DeveloperPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-      {/* Header con estilo glass */}
+      {/* Header con estilo glass - optimizado para móvil */}
       <div className="sticky top-0 z-10 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-4">
+          <div className="flex items-center justify-between h-14 md:h-16">
+            <div className="flex items-center gap-3 md:gap-4">
               <motion.button
                 whileHover={{ scale: 1.05, x: -2 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => navigate('/settings')}
-                className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group"
+                className="p-1.5 md:p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group"
                 aria-label="Volver"
               >
                 <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" />
               </motion.button>
               
-              <div className="flex items-center gap-3">
-                <div className="w-1.5 h-8 bg-gradient-to-b from-purple-500 to-pink-600 rounded-full" />
-                <h1 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+              <div className="flex items-center gap-2 md:gap-3">
+                <div className="w-1 h-6 md:w-1.5 md:h-8 bg-gradient-to-b from-purple-500 to-pink-600 rounded-full" />
+                <h1 className="text-lg md:text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
                   Desarrollador
                 </h1>
               </div>
             </div>
 
             {isDeveloperMode && (
-              <div className="px-3 py-1 bg-purple-500/20 text-purple-600 dark:text-purple-400 rounded-full text-xs border border-purple-500/30">
+              <div className="px-2 py-0.5 md:px-3 md:py-1 bg-purple-500/20 text-purple-600 dark:text-purple-400 rounded-full text-[10px] md:text-xs border border-purple-500/30">
                 Modo Dev
               </div>
             )}
@@ -142,12 +145,12 @@ const DeveloperPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Banner principal con gradiente */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+      {/* Banner principal con gradiente - optimizado para móvil */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-3 md:mt-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative h-56 md:h-64 w-full overflow-hidden rounded-2xl shadow-xl"
+          className="relative h-48 md:h-64 w-full overflow-hidden rounded-xl md:rounded-2xl shadow-xl"
         >
           <div className="w-full h-full flex flex-col items-center justify-center relative bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600">
             <div className="absolute inset-0 opacity-20"
@@ -157,58 +160,55 @@ const DeveloperPage: React.FC = () => {
               }}
             />
             
-            <div className="relative z-10 flex flex-col items-center space-y-4">
-              <h2 className="text-5xl md:text-6xl font-black text-white drop-shadow-2xl tracking-tight animate-pulse">
+            <div className="relative z-10 flex flex-col items-center space-y-2 md:space-y-4 px-4">
+              <h2 className="text-3xl md:text-6xl font-black text-white drop-shadow-2xl tracking-tight">
                 Quick<span className="text-yellow-300">Note</span>
               </h2>
               
               <motion.div 
-                whileHover={{ scale: 1.05 }}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-white/20 backdrop-blur-md rounded-full border-2 border-white/30 shadow-2xl"
+                whileHover={{ scale: 1.02 }}
+                className="inline-flex items-center gap-1.5 md:gap-2 px-3 py-1.5 md:px-5 md:py-2.5 bg-white/20 backdrop-blur-md rounded-full border-2 border-white/30 shadow-2xl"
               >
-                <Sparkles className="w-4 h-4 text-yellow-300" />
-                <span className="text-white font-medium text-sm md:text-base">
-                  Desarrollado con <span className="text-red-300 text-lg">❤️</span> por José Pablo Miranda Quintanilla
+                <Sparkles className="w-3 h-3 md:w-4 md:h-4 text-yellow-300" />
+                <span className="text-white font-medium text-xs md:text-base text-center">
+                  Desarrollado con <span className="text-red-300 text-sm md:text-lg">❤️</span> por José Pablo Miranda Quintanilla
                 </span>
               </motion.div>
             </div>
 
-            <div className="absolute top-4 right-4">
-              <span className="inline-flex items-center px-3 py-1.5 bg-white/20 backdrop-blur-sm rounded-full text-white text-sm font-medium border border-white/30 shadow-lg">
+            <div className="absolute top-2 right-2 md:top-4 md:right-4">
+              <span className="inline-flex items-center px-2 py-1 md:px-3 md:py-1.5 bg-white/20 backdrop-blur-sm rounded-full text-white text-[10px] md:text-sm font-medium border border-white/30 shadow-lg">
                 v 2.4.0
               </span>
             </div>
-
-            <div className="absolute bottom-4 left-4 w-16 h-16 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 animate-pulse" />
           </div>
         </motion.div>
       </div>
 
-      {/* Avatar posicionado sobre el banner */}
+      {/* Avatar posicionado sobre el banner - reemplazado por imagen local */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ type: "spring", stiffness: 260, damping: 20 }}
-          className="relative -mt-12 flex justify-center"
+          className="relative -mt-12 md:-mt-16 flex justify-center"
         >
           <div className="relative">
-            <div className="w-28 h-28 md:w-32 md:h-32 rounded-full bg-white dark:bg-gray-800 p-1.5 shadow-xl">
-              <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                <svg className="w-14 h-14 md:w-16 md:h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h.01M12 12h.01M15 12h.01M9 16h.01M12 16h.01M15 16h.01" />
-                </svg>
-              </div>
+            <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-white dark:bg-gray-800 p-1 shadow-xl">
+              <img 
+                src={developerAvatar} 
+                alt="Avatar desarrollador"
+                className="w-full h-full rounded-full object-cover"
+              />
             </div>
             
             {isDeveloperMode && (
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                className="absolute -bottom-1 -right-1 w-7 h-7 bg-yellow-400 rounded-full border-2 border-white dark:border-gray-800 flex items-center justify-center"
+                className="absolute -bottom-1 -right-1 w-6 h-6 md:w-7 md:h-7 bg-yellow-400 rounded-full border-2 border-white dark:border-gray-800 flex items-center justify-center"
               >
-                <Star className="w-4 h-4 text-white fill-white" />
+                <Star className="w-3 h-3 md:w-4 md:h-4 text-white fill-white" />
               </motion.div>
             )}
           </div>
@@ -216,42 +216,42 @@ const DeveloperPage: React.FC = () => {
       </div>
 
       {/* Información del desarrollador */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 md:mt-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
           className="text-center"
         >
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+          <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white mb-1 md:mb-2">
             {DEMO_PROFILE.name}
           </h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">
+          <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 mb-3 md:mb-4">
             {DEMO_PROFILE.role || 'Desarrollador Full Stack'}
           </p>
           {DEMO_PROFILE.bio && (
-            <p className="text-sm text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">
+            <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 max-w-2xl mx-auto px-2">
               {DEMO_PROFILE.bio}
             </p>
           )}
         </motion.div>
       </div>
 
-      {/* Tecnologías utilizadas - SECCIÓN PRINCIPAL CON CATEGORÍAS */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-6">
+      {/* Tecnologías utilizadas - SECCIÓN PRINCIPAL CON CATEGORÍAS - Optimizado para móvil */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 md:mt-8 space-y-4 md:space-y-6">
         {/* Frontend */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-gray-700 p-6"
+          className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6"
         >
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4 flex items-center gap-2">
-            <Layout className="w-4 h-4 text-blue-500" />
+          <h3 className="text-xs md:text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3 md:mb-4 flex items-center gap-2">
+            <Layout className="w-3.5 h-3.5 md:w-4 md:h-4 text-blue-500" />
             Frontend
           </h3>
           
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 md:gap-3">
             {categories.frontend.map((tech, index) => {
               const colorClasses = {
                 blue: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
@@ -267,14 +267,14 @@ const DeveloperPage: React.FC = () => {
               return (
                 <motion.div
                   key={index}
-                  whileHover={{ scale: 1.05, y: -2 }}
-                  className={`p-3 rounded-xl border ${colorClasses[tech.color as keyof typeof colorClasses]} flex flex-col items-center text-center group cursor-default`}
+                  whileHover={{ scale: 1.02, y: -1 }}
+                  className={`p-2 md:p-3 rounded-lg md:rounded-xl border ${colorClasses[tech.color as keyof typeof colorClasses]} flex flex-col items-center text-center group cursor-default`}
                 >
-                  <div className="p-2 rounded-full mb-2 group-hover:scale-110 transition-transform">
+                  <div className="p-1.5 md:p-2 rounded-full mb-1 md:mb-2 group-hover:scale-110 transition-transform">
                     {tech.icon}
                   </div>
-                  <span className="text-xs font-medium mb-1">{tech.name}</span>
-                  <span className="text-[10px] opacity-70">{tech.description}</span>
+                  <span className="text-[10px] md:text-xs font-medium mb-0.5 md:mb-1">{tech.name}</span>
+                  <span className="text-[8px] md:text-[10px] opacity-70 hidden sm:block">{tech.description}</span>
                 </motion.div>
               );
             })}
@@ -286,14 +286,14 @@ const DeveloperPage: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.25 }}
-          className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-gray-700 p-6"
+          className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6"
         >
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4 flex items-center gap-2">
-            <Server className="w-4 h-4 text-green-500" />
+          <h3 className="text-xs md:text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3 md:mb-4 flex items-center gap-2">
+            <Server className="w-3.5 h-3.5 md:w-4 md:h-4 text-green-500" />
             Backend & Base de Datos
           </h3>
           
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 md:gap-3">
             {categories.backend.map((tech, index) => {
               const colorClasses = {
                 blue: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
@@ -304,14 +304,14 @@ const DeveloperPage: React.FC = () => {
               return (
                 <motion.div
                   key={index}
-                  whileHover={{ scale: 1.05, y: -2 }}
-                  className={`p-3 rounded-xl border ${colorClasses[tech.color as keyof typeof colorClasses]} flex flex-col items-center text-center group cursor-default`}
+                  whileHover={{ scale: 1.02, y: -1 }}
+                  className={`p-2 md:p-3 rounded-lg md:rounded-xl border ${colorClasses[tech.color as keyof typeof colorClasses]} flex flex-col items-center text-center group cursor-default`}
                 >
-                  <div className="p-2 rounded-full mb-2 group-hover:scale-110 transition-transform">
+                  <div className="p-1.5 md:p-2 rounded-full mb-1 md:mb-2 group-hover:scale-110 transition-transform">
                     {tech.icon}
                   </div>
-                  <span className="text-xs font-medium mb-1">{tech.name}</span>
-                  <span className="text-[10px] opacity-70">{tech.description}</span>
+                  <span className="text-[10px] md:text-xs font-medium mb-0.5 md:mb-1">{tech.name}</span>
+                  <span className="text-[8px] md:text-[10px] opacity-70 hidden sm:block">{tech.description}</span>
                 </motion.div>
               );
             })}
@@ -323,14 +323,14 @@ const DeveloperPage: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-gray-700 p-6"
+          className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6"
         >
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4 flex items-center gap-2">
-            <Shield className="w-4 h-4 text-purple-500" />
+          <h3 className="text-xs md:text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3 md:mb-4 flex items-center gap-2">
+            <Shield className="w-3.5 h-3.5 md:w-4 md:h-4 text-purple-500" />
             Seguridad & Autenticación
           </h3>
           
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 md:gap-3">
             {categories.seguridad.map((tech, index) => {
               const colorClasses = {
                 purple: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
@@ -340,14 +340,14 @@ const DeveloperPage: React.FC = () => {
               return (
                 <motion.div
                   key={index}
-                  whileHover={{ scale: 1.05, y: -2 }}
-                  className={`p-3 rounded-xl border ${colorClasses[tech.color as keyof typeof colorClasses]} flex flex-col items-center text-center group cursor-default`}
+                  whileHover={{ scale: 1.02, y: -1 }}
+                  className={`p-2 md:p-3 rounded-lg md:rounded-xl border ${colorClasses[tech.color as keyof typeof colorClasses]} flex flex-col items-center text-center group cursor-default`}
                 >
-                  <div className="p-2 rounded-full mb-2 group-hover:scale-110 transition-transform">
+                  <div className="p-1.5 md:p-2 rounded-full mb-1 md:mb-2 group-hover:scale-110 transition-transform">
                     {tech.icon}
                   </div>
-                  <span className="text-xs font-medium mb-1">{tech.name}</span>
-                  <span className="text-[10px] opacity-70">{tech.description}</span>
+                  <span className="text-[10px] md:text-xs font-medium mb-0.5 md:mb-1">{tech.name}</span>
+                  <span className="text-[8px] md:text-[10px] opacity-70 hidden sm:block">{tech.description}</span>
                 </motion.div>
               );
             })}
@@ -359,14 +359,14 @@ const DeveloperPage: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.35 }}
-          className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-gray-700 p-6"
+          className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6"
         >
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4 flex items-center gap-2">
-            <Cloud className="w-4 h-4 text-indigo-500" />
+          <h3 className="text-xs md:text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3 md:mb-4 flex items-center gap-2">
+            <Cloud className="w-3.5 h-3.5 md:w-4 md:h-4 text-indigo-500" />
             Sistema de Backups
           </h3>
           
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 md:gap-3">
             {categories.backups.map((tech, index) => {
               const colorClasses = {
                 indigo: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20',
@@ -379,14 +379,14 @@ const DeveloperPage: React.FC = () => {
               return (
                 <motion.div
                   key={index}
-                  whileHover={{ scale: 1.05, y: -2 }}
-                  className={`p-3 rounded-xl border ${colorClasses[tech.color as keyof typeof colorClasses]} flex flex-col items-center text-center group cursor-default`}
+                  whileHover={{ scale: 1.02, y: -1 }}
+                  className={`p-2 md:p-3 rounded-lg md:rounded-xl border ${colorClasses[tech.color as keyof typeof colorClasses]} flex flex-col items-center text-center group cursor-default`}
                 >
-                  <div className="p-2 rounded-full mb-2 group-hover:scale-110 transition-transform">
+                  <div className="p-1.5 md:p-2 rounded-full mb-1 md:mb-2 group-hover:scale-110 transition-transform">
                     {tech.icon}
                   </div>
-                  <span className="text-xs font-medium mb-1">{tech.name}</span>
-                  <span className="text-[10px] opacity-70">{tech.description}</span>
+                  <span className="text-[10px] md:text-xs font-medium mb-0.5 md:mb-1">{tech.name}</span>
+                  <span className="text-[8px] md:text-[10px] opacity-70 hidden sm:block">{tech.description}</span>
                 </motion.div>
               );
             })}
@@ -398,14 +398,14 @@ const DeveloperPage: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-gray-700 p-6"
+          className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6"
         >
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4 flex items-center gap-2">
-            <Download className="w-4 h-4 text-emerald-500" />
+          <h3 className="text-xs md:text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3 md:mb-4 flex items-center gap-2">
+            <Download className="w-3.5 h-3.5 md:w-4 md:h-4 text-emerald-500" />
             Exportación & Compartición
           </h3>
           
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 md:gap-3">
             {categories.exportacion.map((tech, index) => {
               const colorClasses = {
                 red: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20',
@@ -416,14 +416,14 @@ const DeveloperPage: React.FC = () => {
               return (
                 <motion.div
                   key={index}
-                  whileHover={{ scale: 1.05, y: -2 }}
-                  className={`p-3 rounded-xl border ${colorClasses[tech.color as keyof typeof colorClasses]} flex flex-col items-center text-center group cursor-default`}
+                  whileHover={{ scale: 1.02, y: -1 }}
+                  className={`p-2 md:p-3 rounded-lg md:rounded-xl border ${colorClasses[tech.color as keyof typeof colorClasses]} flex flex-col items-center text-center group cursor-default`}
                 >
-                  <div className="p-2 rounded-full mb-2 group-hover:scale-110 transition-transform">
+                  <div className="p-1.5 md:p-2 rounded-full mb-1 md:mb-2 group-hover:scale-110 transition-transform">
                     {tech.icon}
                   </div>
-                  <span className="text-xs font-medium mb-1">{tech.name}</span>
-                  <span className="text-[10px] opacity-70">{tech.description}</span>
+                  <span className="text-[10px] md:text-xs font-medium mb-0.5 md:mb-1">{tech.name}</span>
+                  <span className="text-[8px] md:text-[10px] opacity-70 hidden sm:block">{tech.description}</span>
                 </motion.div>
               );
             })}
@@ -436,14 +436,14 @@ const DeveloperPage: React.FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.45 }}
-            className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-gray-700 p-6"
+            className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6"
           >
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4 flex items-center gap-2">
-              <Figma className="w-4 h-4 text-purple-500" />
+            <h3 className="text-xs md:text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3 md:mb-4 flex items-center gap-2">
+              <Figma className="w-3.5 h-3.5 md:w-4 md:h-4 text-purple-500" />
               Diseño & UI/UX
             </h3>
             
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 md:gap-3">
               {categories.diseno.map((tech, index) => {
                 const colorClasses = {
                   purple: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
@@ -452,14 +452,14 @@ const DeveloperPage: React.FC = () => {
                 return (
                   <motion.div
                     key={index}
-                    whileHover={{ scale: 1.05, y: -2 }}
-                    className={`p-3 rounded-xl border ${colorClasses[tech.color as keyof typeof colorClasses]} flex flex-col items-center text-center group cursor-default`}
+                    whileHover={{ scale: 1.02, y: -1 }}
+                    className={`p-2 md:p-3 rounded-lg md:rounded-xl border ${colorClasses[tech.color as keyof typeof colorClasses]} flex flex-col items-center text-center group cursor-default`}
                   >
-                    <div className="p-2 rounded-full mb-2 group-hover:scale-110 transition-transform">
+                    <div className="p-1.5 md:p-2 rounded-full mb-1 md:mb-2 group-hover:scale-110 transition-transform">
                       {tech.icon}
                     </div>
-                    <span className="text-xs font-medium mb-1">{tech.name}</span>
-                    <span className="text-[10px] opacity-70">{tech.description}</span>
+                    <span className="text-[10px] md:text-xs font-medium mb-0.5 md:mb-1">{tech.name}</span>
+                    <span className="text-[8px] md:text-[10px] opacity-70 hidden sm:block">{tech.description}</span>
                   </motion.div>
                 );
               })}
@@ -469,57 +469,57 @@ const DeveloperPage: React.FC = () => {
 
         {/* Contador de tecnologías */}
         <div className="text-center">
-          <p className="text-xs text-gray-500 dark:text-gray-400">
+          <p className="text-[10px] md:text-xs text-gray-500 dark:text-gray-400">
             {technologies.length} tecnologías utilizadas en el desarrollo de QuickNote v2.4.0
           </p>
         </div>
       </div>
 
-      {/* Sección "Conectar conmigo" - SIN LINKEDIN */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+      {/* Sección "Conectar conmigo" - Optimizado para móvil */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 md:mt-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="border-t border-gray-200 dark:border-gray-700 pt-8"
+          className="border-t border-gray-200 dark:border-gray-700 pt-6 md:pt-8"
         >
-          <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">
+          <h3 className="text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 md:mb-4">
             Conectar conmigo
           </h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 max-w-2xl mx-auto">
             {/* GitHub */}
             <motion.button
-              whileHover={{ scale: 1.02, x: 5 }}
+              whileHover={{ scale: 1.01, x: 3 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => launchUrl(DEMO_PROFILE.github_url)}
-              className="w-full px-4 py-4 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 hover:shadow-md transition-all duration-200 flex items-center gap-3 group"
+              className="w-full px-3 py-3 md:px-4 md:py-4 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 hover:shadow-md transition-all duration-200 flex items-center gap-2 md:gap-3 group"
             >
-              <div className="w-10 h-10 rounded-full bg-gray-900 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Github className="w-5 h-5 text-white" />
+              <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gray-900 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Github className="w-4 h-4 md:w-5 md:h-5 text-white" />
               </div>
               <div className="flex-1 text-left">
-                <span className="font-medium block text-gray-900 dark:text-white">GitHub</span>
-                <span className="text-xs text-gray-500 dark:text-gray-400">@jose-pablo-miranda</span>
+                <span className="font-medium text-sm md:text-base block text-gray-900 dark:text-white">GitHub</span>
+                <span className="text-[10px] md:text-xs text-gray-500 dark:text-gray-400">@jose-pablo-miranda</span>
               </div>
-              <ArrowLeft className="w-5 h-5 text-gray-400 rotate-180 group-hover:translate-x-1 transition-transform" />
+              <ArrowLeft className="w-4 h-4 md:w-5 md:h-5 text-gray-400 rotate-180 group-hover:translate-x-1 transition-transform" />
             </motion.button>
 
             {/* Email */}
             <motion.button
-              whileHover={{ scale: 1.02, x: 5 }}
+              whileHover={{ scale: 1.01, x: 3 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => window.location.href = `mailto:${DEMO_PROFILE.email}`}
-              className="w-full px-4 py-4 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 hover:shadow-md transition-all duration-200 flex items-center gap-3 group"
+              className="w-full px-3 py-3 md:px-4 md:py-4 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 hover:shadow-md transition-all duration-200 flex items-center gap-2 md:gap-3 group"
             >
-              <div className="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Mail className="w-5 h-5 text-white" />
+              <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-red-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Mail className="w-4 h-4 md:w-5 md:h-5 text-white" />
               </div>
               <div className="flex-1 text-left">
-                <span className="font-medium block text-gray-900 dark:text-white">Email</span>
-                <span className="text-xs text-gray-500 dark:text-gray-400">{DEMO_PROFILE.email}</span>
+                <span className="font-medium text-sm md:text-base block text-gray-900 dark:text-white">Email</span>
+                <span className="text-[10px] md:text-xs text-gray-500 dark:text-gray-400">{DEMO_PROFILE.email}</span>
               </div>
-              <ArrowLeft className="w-5 h-5 text-gray-400 rotate-180 group-hover:translate-x-1 transition-transform" />
+              <ArrowLeft className="w-4 h-4 md:w-5 md:h-5 text-gray-400 rotate-180 group-hover:translate-x-1 transition-transform" />
             </motion.button>
           </div>
         </motion.div>
@@ -530,23 +530,23 @@ const DeveloperPage: React.FC = () => {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 pb-8"
+          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 md:mt-8 pb-6 md:pb-8"
         >
           <button
             onClick={logoutDeveloper}
-            className="w-full md:w-auto px-6 py-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors flex items-center justify-center gap-3 mx-auto"
+            className="w-full md:w-auto px-4 py-2.5 md:px-6 md:py-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors flex items-center justify-center gap-2 md:gap-3 mx-auto"
           >
-            <div className="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center">
-              <Shield className="w-4 h-4 text-white" />
+            <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-red-500 flex items-center justify-center">
+              <Shield className="w-3 h-3 md:w-4 md:h-4 text-white" />
             </div>
-            <span className="font-medium text-red-600 dark:text-red-400">Modo Desarrollador Activo - Salir</span>
+            <span className="font-medium text-sm md:text-base text-red-600 dark:text-red-400">Modo Desarrollador Activo - Salir</span>
           </button>
         </motion.div>
       )}
 
       {/* Footer */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 pb-6">
-        <p className="text-center text-xs text-gray-500 dark:text-gray-400">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 md:mt-8 pb-4 md:pb-6">
+        <p className="text-center text-[10px] md:text-xs text-gray-500 dark:text-gray-400">
           QuickNote v2.4.0 · Todos los derechos reservados
         </p>
       </div>

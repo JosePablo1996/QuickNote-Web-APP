@@ -28,12 +28,11 @@ interface VersionData {
 const ChangelogPage: React.FC = () => {
   const navigate = useNavigate();
   const { isDarkMode } = useTheme();
-  const [expandedVersions, setExpandedVersions] = useState<Set<string>>(new Set(['2.4.0']));
+  const [expandedVersions, setExpandedVersions] = useState<Set<string>>(new Set(['2.5.0']));
   const contentRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   // Función para toggle de versión SOLO con clic
   const toggleVersion = (version: string, e?: React.MouseEvent) => {
-    // Prevenir que el clic en el botón se propague al contenedor padre
     if (e) {
       e.stopPropagation();
     }
@@ -48,14 +47,307 @@ const ChangelogPage: React.FC = () => {
     });
   };
 
-  // Versiones de la aplicación web (completas desde 1.0.0 hasta 2.4.0)
+  // Versiones de la aplicación web (desde 1.0.0 hasta 2.5.0)
   const versions: VersionData[] = [
     {
-      version: '2.4.0',
+      version: '2.5.0',
       date: '15 May 2026',
+      title: '🔐 Seguridad Avanzada, 2FA Completo y Recuperación por OTP',
+      gradientColors: ['#8B5CF6', '#EC4899'],
+      isLatest: true,
+      changes: [
+        {
+          title: '🔐 Seguridad Avanzada de Contraseñas',
+          icon: (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          ),
+          color: '#10B981',
+          items: [
+            {
+              description: '📜 Historial de contraseñas',
+              subItems: [
+                'Almacena las últimas 5 contraseñas usadas por usuario',
+                'Prevención de reutilización de contraseñas anteriores',
+                'Tabla password_history en Supabase con hashes seguros',
+              ],
+            },
+            {
+              description: '⏰ Expiración de contraseñas',
+              subItems: [
+                'Contraseñas expiran automáticamente después de 90 días',
+                'Notificación al usuario antes de la expiración',
+                'Forzar cambio de contraseña al expirar',
+              ],
+            },
+            {
+              description: '🚪 Invalidación de sesiones',
+              subItems: [
+                'Al cambiar contraseña, se invalidan todas las sesiones activas',
+                'Nueva columna session_version en profiles',
+                'Requiere relogin después de cambios de seguridad',
+              ],
+            },
+          ],
+        },
+        {
+          title: '📧 Recuperación de Contraseña con OTP (4 pasos)',
+          icon: (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+          ),
+          color: '#3B82F6',
+          items: [
+            {
+              description: '🔄 Flujo completo de 4 pasos',
+              subItems: [
+                'Paso 1: Bienvenida y explicación del proceso',
+                'Paso 2: Ingreso de email para recibir código OTP',
+                'Paso 3: Verificación de código OTP de 6 dígitos',
+                'Paso 4: Establecer nueva contraseña segura',
+              ],
+            },
+            {
+              description: '⏱️ Timer de reenvío de código',
+              subItems: [
+                'Botón de reenvío habilitado después de 60 segundos',
+                'Límite de 3 intentos por código OTP',
+                'Código OTP válido por 10 minutos',
+              ],
+            },
+            {
+              description: '🔒 Validación de fortaleza de contraseña',
+              subItems: [
+                'Barra de progreso visual con colores (rojo/amarillo/verde)',
+                'Niveles: Débil, Media, Fuerte',
+                'Requisitos mínimos: 8 caracteres, mayúscula, número, símbolo',
+              ],
+            },
+          ],
+        },
+        {
+          title: '🔢 Autenticación 2FA (TOTP) Completa',
+          icon: (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" />
+            </svg>
+          ),
+          color: '#F59E0B',
+          items: [
+            {
+              description: '📱 Integración con Google Authenticator',
+              subItems: [
+                'Generación de código QR para escanear con la app',
+                'Verificación de código TOTP de 6 dígitos',
+                'Códigos expiran cada 30 segundos por seguridad',
+              ],
+            },
+            {
+              description: '🎫 Códigos de respaldo (backup codes)',
+              subItems: [
+                '8 códigos de un solo uso generados al activar 2FA',
+                'Almacenamiento hasheado en base de datos',
+                'Códigos regenerables desde configuración',
+              ],
+            },
+            {
+              description: '🔄 Flujo de login con 2FA',
+              subItems: [
+                'Backend retorna requires_2fa + temp_token al detectar 2FA activo',
+                'Redirección automática a pantalla de verificación',
+                'temp_token válido por 5 minutos para verificación',
+              ],
+            },
+            {
+              description: '⚙️ Gestión completa desde Settings',
+              subItems: [
+                'Activar/Desactivar 2FA con verificación de código',
+                'Visualización y regeneración de códigos de respaldo',
+                'Modal de configuración paso a paso',
+              ],
+            },
+          ],
+        },
+        {
+          title: '📨 Sistema de Emails OTP con SendGrid',
+          icon: (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+          ),
+          color: '#EC4899',
+          items: [
+            {
+              description: '📧 Envío real con SendGrid',
+              subItems: [
+                'SendGrid como método primario (100 emails/día gratis)',
+                'Respaldo automático con SMTP Gmail si SendGrid falla',
+                'Email HTML profesional con diseño responsive',
+              ],
+            },
+            {
+              description: '🎨 Diseño de email personalizado',
+              subItems: [
+                'Gradiente QuickNote (púrpura/azul) en el encabezado',
+                'Código OTP destacado en fuente grande (48px)',
+                'Borde punteado alrededor del código para fácil identificación',
+                'Mensajes de seguridad y expiración en el email',
+                'Pie de página personalizado con créditos',
+              ],
+            },
+          ],
+        },
+        {
+          title: '🗄️ Base de Datos - Nuevas Tablas y Columnas',
+          icon: (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+            </svg>
+          ),
+          color: '#6366F1',
+          items: [
+            {
+              description: '📊 Nuevas tablas en Supabase',
+              subItems: [
+                'password_history - Historial de hashes de contraseñas',
+                'password_policies - Políticas de expiración y reutilización',
+                'active_sessions - Sesiones activas de usuarios',
+                'security_events - Auditoría de eventos de seguridad',
+                'two_factor_settings - Configuración TOTP por usuario',
+              ],
+            },
+            {
+              description: '📝 Nuevas columnas en profiles',
+              subItems: [
+                'session_version (BIGINT) - Versión de sesión para invalidar tokens',
+                'password_changed_at (TIMESTAMP) - Fecha del último cambio',
+                'password_expires_at (TIMESTAMP) - Fecha de expiración',
+                'password_reset_via_otp (BOOLEAN) - Indica reset por OTP',
+              ],
+            },
+            {
+              description: '🔧 Funciones SQL implementadas',
+              subItems: [
+                'check_password_history() - Verifica si contraseña ya fue usada',
+                'is_password_expired() - Verifica si la contraseña expiró',
+                'password_days_remaining() - Días restantes hasta expiración',
+              ],
+            },
+          ],
+        },
+        {
+          title: '🖥️ Nuevos Componentes Frontend',
+          icon: (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          ),
+          color: '#8B5CF6',
+          items: [
+            {
+              description: '✨ Componentes UI creados',
+              subItems: [
+                'GreetingWidget.tsx - Saludo dinámico con avatar y hora',
+                'ViewToggle.tsx - Cambio entre vista Grid y Lista',
+                'TwoFactorSetup.tsx - Configuración de 2FA con QR',
+                'TwoFactorVerify.tsx - Verificación 2FA durante login',
+                'ForgotPasswordPage.tsx - Recuperación OTP de 4 pasos',
+              ],
+            },
+            {
+              description: '🎨 Rediseños UI/UX',
+              subItems: [
+                'SplashScreen - Gradiente radial + partículas animadas + tips rotativos',
+                'SettingsPage - Perfil centrado, avatar cuadrado, modal compacto',
+                'DeveloperPage - Avatar personalizado y optimización móvil',
+                'LoginPage - Ocultar Passkey en producción',
+              ],
+            },
+          ],
+        },
+        {
+          title: '🐛 Correcciones de Errores v2.5.0',
+          icon: (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            </svg>
+          ),
+          color: '#EF4444',
+          items: [
+            {
+              description: '🔧 Backend',
+              subItems: [
+                'Corrección de RLS policies para 2FA',
+                'Soporte para tokens HS256 (passkey) y ES256 (Supabase)',
+                'Métodos is_null e is_not_null agregados a Supabase client',
+                'Filtro de campos permitidos en update_user_metadata',
+                'CORS configurado con orígenes explícitos',
+              ],
+            },
+            {
+              description: '🔧 Frontend',
+              subItems: [
+                'URLs absolutas en AuthProvider (eliminado /api/v1 duplicado)',
+                'Archivo _redirects para SPA en Render',
+                'Detección de entorno para ocultar Passkey en producción',
+                'Prevención de múltiples llamadas loadUserFromToken con hasChecked',
+                'Corrección de bucle infinito al archivar/desarchivar notas',
+              ],
+            },
+            {
+              description: '🔧 Seguridad',
+              subItems: [
+                'Normalización de credential_id como base64url',
+                'Validación y sanitización de claves públicas',
+                'Manejo de errores en registro de passkeys',
+                'Cierre de sesiones remotas al cambiar contraseña',
+              ],
+            },
+          ],
+        },
+        {
+          title: '📦 Dependencias Actualizadas v2.5.0',
+          icon: (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+            </svg>
+          ),
+          color: '#14B8A6',
+          items: [
+            {
+              description: '📦 Backend',
+              subItems: [
+                'fastapi: ^0.115.6',
+                'pydantic: ^2.10.6',
+                'supabase: ^2.7.0',
+                'python-multipart: ^0.0.20',
+                'pyotp: ^2.9.0 (TOTP)',
+                'qrcode: ^7.4.2',
+                'Pillow: ^10.4.0',
+              ],
+            },
+            {
+              description: '📦 Frontend',
+              subItems: [
+                'react: ^18.3.1',
+                'typescript: ^5.6.3',
+                'framer-motion: ^11.11.17',
+                'lucide-react: ^0.460.0',
+                'react-router-dom: ^6.26.2',
+                'qrcode.react: ^4.2.0',
+              ],
+            },
+          ],
+        },
+      ],
+    },
+    {
+      version: '2.4.0',
+      date: '12 May 2026',
       title: '🧹 Estabilización, limpieza y preparación para producción',
       gradientColors: ['#10B981', '#059669'],
-      isLatest: true,
       changes: [
         {
           title: '🧹 Mejoras generales - Backend',
@@ -190,43 +482,11 @@ const ChangelogPage: React.FC = () => {
             },
           ],
         },
-        {
-          title: '📦 Dependencias Actualizadas',
-          icon: (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
-            </svg>
-          ),
-          color: '#6366F1',
-          items: [
-            {
-              description: '📦 Backend',
-              subItems: [
-                '@supabase/supabase-js: ^2.99.0',
-                '@simplewebauthn/server: ^13.2.3',
-                'express: ^5.2.1',
-                'jsonwebtoken: ^9.0.3',
-                'speakeasy: ^2.0.0 (TOTP)',
-                'qrcode: ^1.5.4',
-              ],
-            },
-            {
-              description: '📦 Frontend',
-              subItems: [
-                'react: ^18.2.0',
-                '@simplewebauthn/browser: ^13.2.2',
-                'framer-motion: ^12.35.1',
-                'tailwindcss: ^3.4.1',
-                'qrcode.react: ^4.2.0',
-              ],
-            },
-          ],
-        },
       ],
     },
     {
       version: '2.3.0',
-      date: '12 May 2026',
+      date: '09 May 2026',
       title: '☁️ Backup en la nube (Cloud Backup)',
       gradientColors: ['#3B82F6', '#8B5CF6'],
       changes: [
@@ -259,7 +519,7 @@ const ChangelogPage: React.FC = () => {
               subItems: [
                 'Uso de compresión gzip para minimizar almacenamiento',
                 'JSON.stringify optimizado para grandes volúmenes de notas',
-                'Límite de 10 backups por usuario (configurable)',
+                'Límite de 10 backups por usuario',
               ],
             },
           ],
@@ -276,7 +536,6 @@ const ChangelogPage: React.FC = () => {
             {
               description: '📱 Nuevo componente CloudBackupSection.tsx',
               subItems: [
-                'Grid de resumen en BackupPage.tsx',
                 'Listado de backups con fecha, tamaño y número de notas',
                 'Botones para crear, restaurar y eliminar backups',
               ],
@@ -289,92 +548,37 @@ const ChangelogPage: React.FC = () => {
                 'Notificaciones de éxito/error',
               ],
             },
-            {
-              description: '📊 Grid de resumen en BackupPage.tsx',
-              subItems: [
-                'Visualización de almacenamiento usado',
-                'Límite de backups disponibles',
-                'Animaciones al crear/restaurar backups',
-              ],
-            },
-          ],
-        },
-        {
-          title: '🐛 Correcciones v2.3.0',
-          icon: (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            </svg>
-          ),
-          color: '#EF4444',
-          items: [
-            {
-              description: '🔧 Importación circular en app/models/backup.py',
-              subItems: [
-                'Refactorización de imports para evitar circularidad',
-                'Separación de tipos y modelos',
-              ],
-            },
-            {
-              description: '🔧 Error 422 al guardar backup',
-              subItems: [
-                'Formato incorrecto de notes_data corregido',
-                'Validación de datos antes de guardar',
-              ],
-            },
-            {
-              description: '🔧 TypeScript: restoredNotes puede ser null',
-              subItems: [
-                'Manejo de null en restoredNotes',
-                'Operadores opcionales y valores por defecto',
-              ],
-            },
-            {
-              description: '📤 Falta de exportación de CloudBackupMetadata',
-              subItems: [
-                'Exportación agregada en api.ts',
-                'Tipos completos para TypeScript',
-              ],
-            },
           ],
         },
       ],
     },
     {
       version: '2.2.0',
-      date: '10 May 2026',
-      title: '🔄 Flujo 2FA completo + Integración con login',
+      date: '07 May 2026',
+      title: '🔄 Flujo OTP por email y mejoras en login',
       gradientColors: ['#EC4899', '#F43F5E'],
       changes: [
         {
-          title: '🔄 Flujo completo de login con 2FA',
+          title: '📧 Sistema completo de envío de emails OTP',
           icon: (
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
           ),
-          color: '#EC4899',
+          color: '#3B82F6',
           items: [
             {
-              description: '🔐 Backend retorna requires_2fa y temp_token',
+              description: '📨 Envío real con SendGrid + respaldo SMTP',
               subItems: [
-                'Nueva respuesta en /auth/login cuando 2FA está habilitado',
-                'temp_token válido por 5 minutos para verificación 2FA',
-                'Requiere_2fa flag para UI condicional',
-              ],
-            },
-            {
-              description: '🎨 Frontend maneja paso a paso (credentials → 2fa)',
-              subItems: [
-                'Redirección automática a pantalla de verificación 2FA',
-                'Manejo de estado intermedio entre login y verificación',
-                'Persistencia de email en sessionStorage durante el flujo',
+                'SendGrid como método primario (100 emails/día gratis)',
+                'Respaldo automático con SMTP Gmail',
+                'Email HTML profesional con diseño responsive',
               ],
             },
           ],
         },
         {
-          title: '📧 Rediseño de LoginPage.tsx',
+          title: '📱 Rediseño de LoginPage.tsx',
           icon: (
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -400,89 +604,12 @@ const ChangelogPage: React.FC = () => {
             },
           ],
         },
-        {
-          title: '📨 Sistema completo de envío de emails OTP',
-          icon: (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-          ),
-          color: '#3B82F6',
-          items: [
-            {
-              description: '📨 Envío real con SendGrid + respaldo SMTP',
-              subItems: [
-                'SendGrid como método primario (100 emails/día gratis)',
-                'Respaldo automático con SMTP Gmail si SendGrid falla',
-                'Email HTML profesional con diseño responsive',
-              ],
-            },
-            {
-              description: '🎨 Diseño con gradiente QuickNote',
-              subItems: [
-                'Email con gradiente púrpura/azul (QuickNote)',
-                'Código OTP destacado en fuente grande (48px)',
-                'Borde punteado alrededor del código',
-                'Mensajes de seguridad y expiración en el email',
-                'Pie de página personalizado con créditos',
-              ],
-            },
-          ],
-        },
-        {
-          title: '🐛 Correcciones v2.2.0',
-          icon: (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            </svg>
-          ),
-          color: '#EF4444',
-          items: [
-            {
-              description: '🔧 email_service.py no enviaba correos reales',
-              subItems: [
-                'El código original solo logueaba el OTP en consola',
-                'Todo el código de envío SMTP estaba comentado',
-                'Reescritura completa con lógica real SendGrid + SMTP',
-              ],
-            },
-            {
-              description: '🔧 auth.py no llamaba a send_otp_email()',
-              subItems: [
-                'La ruta /send-otp solo logueaba el código',
-                'Había un TODO sin implementar el envío real',
-                'Agregada llamada real a la función de envío',
-              ],
-            },
-            {
-              description: '🔧 Faltaban variables de entorno en backend',
-              subItems: [
-                'Creación de archivo .env con SENDGRID_API_KEY y SMTP_*',
-                'Carga de variables con ruta absoluta en config.py',
-              ],
-            },
-            {
-              description: '🔧 Pantalla 2FA no aparecía',
-              subItems: [
-                'Redirección anticipada corregida',
-                'Espera completa del flujo antes de redirigir',
-              ],
-            },
-            {
-              description: '🔧 Inconsistencias snake_case/camelCase',
-              subItems: [
-                'Unificación de formato en respuestas API',
-                'Conversión automática en frontend',
-              ],
-            },
-          ],
-        },
       ],
     },
     {
       version: '2.1.0',
-      date: '09 May 2026',
-      title: '🔐 Soporte inicial de 2FA (TOTP) + Mejoras en autenticación',
+      date: '05 May 2026',
+      title: '🔐 Soporte inicial de 2FA (TOTP)',
       gradientColors: ['#10B981', '#3B82F6'],
       changes: [
         {
@@ -499,13 +626,11 @@ const ChangelogPage: React.FC = () => {
               subItems: [
                 'Generación de códigos de 6 dígitos que expiran cada 30 segundos',
                 'Compatibilidad con Google Authenticator, Authy, Microsoft Authenticator',
-                'Uso de librería speakeasy para generación/verificación',
               ],
             },
             {
               description: '📱 Generación de QR para escanear',
               subItems: [
-                'Endpoint GET /auth/2fa/generate-qr',
                 'URL otpauth://totp/QuickNote:email',
                 'QR code generado con librería qrcode',
               ],
@@ -515,7 +640,6 @@ const ChangelogPage: React.FC = () => {
               subItems: [
                 '10 códigos de un solo uso generados al habilitar 2FA',
                 'Almacenamiento hasheado en base de datos',
-                'Códigos regenerables desde configuración',
               ],
             },
           ],
@@ -532,112 +656,10 @@ const ChangelogPage: React.FC = () => {
             {
               description: '📡 Endpoints implementados',
               subItems: [
-                'POST /auth/2fa/enable - Habilitar 2FA con código TOTP',
-                'POST /auth/2fa/verify-enable - Verificar código durante habilitación',
-                'POST /auth/2fa/verify-login - Verificar código durante login',
+                'POST /auth/2fa/enable - Habilitar 2FA',
+                'POST /auth/2fa/verify-login - Verificar durante login',
                 'POST /auth/2fa/disable - Deshabilitar 2FA',
-                'GET /auth/2fa/status - Ver estado de 2FA del usuario',
-              ],
-            },
-          ],
-        },
-        {
-          title: '🎨 Nuevos componentes frontend 2FA',
-          icon: (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-          ),
-          color: '#8B5CF6',
-          items: [
-            {
-              description: '📁 Componentes creados',
-              subItems: [
-                'TwoFactorSetup.tsx - Configuración inicial de 2FA (QR + código)',
-                'TwoFactorVerify.tsx - Verificación durante login',
-                'TwoFactorBackupCodes.tsx - Visualización y regeneración de códigos de respaldo',
-              ],
-            },
-            {
-              description: '🎯 Integración en SettingsPage',
-              subItems: [
-                'Toggle para habilitar/deshabilitar 2FA',
-                'Sección dedicada a códigos de respaldo',
-                'Diálogos modales para cada paso del proceso',
-              ],
-            },
-          ],
-        },
-        {
-          title: '🗄️ Base de datos y RLS',
-          icon: (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
-            </svg>
-          ),
-          color: '#F59E0B',
-          items: [
-            {
-              description: '📊 Nueva tabla two_factor_settings',
-              subItems: [
-                'user_id (UUID, PK) - Referencia a auth.users',
-                'enabled (boolean) - Estado de 2FA',
-                'secret_encrypted (text) - Secreto TOTP encriptado',
-                'backup_codes_hashed (text[]) - Array de códigos de respaldo hasheados',
-                'created_at / updated_at - Timestamps',
-              ],
-            },
-            {
-              description: '🔒 Políticas RLS implementadas',
-              subItems: [
-                'Solo el usuario puede leer/escribir su configuración 2FA',
-                'Service role puede leer para verificación durante login',
-              ],
-            },
-          ],
-        },
-        {
-          title: '🐛 Correcciones v2.1.0',
-          icon: (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            </svg>
-          ),
-          color: '#EF4444',
-          items: [
-            {
-              description: '🔧 Importaciones rotas en servicios de Supabase',
-              subItems: [
-                'Corrección de paths en imports',
-                'Reorganización de estructura de carpetas',
-              ],
-            },
-            {
-              description: '🔧 Error con result.data en cliente Supabase personalizado',
-              subItems: [
-                'Normalización de respuesta de Supabase',
-                'Manejo consistente de result.data vs result',
-              ],
-            },
-            {
-              description: '🔧 Incompatibilidad con Pillow 10.2.0',
-              subItems: [
-                'Actualización de Pillow a 11.0.0',
-                'Resuelve problemas de compatibilidad con Python 3.12',
-              ],
-            },
-            {
-              description: '🔧 Errores TypeScript en componentes 2FA',
-              subItems: [
-                'Tipado correcto de props y estados',
-                'Definición de interfaces faltantes',
-              ],
-            },
-            {
-              description: '🔧 Redirecciones duplicadas y bucles en autenticación',
-              subItems: [
-                'Prevención de múltiples navigate() en useEffect',
-                'Manejo de estado de carga para evitar loops',
+                'GET /auth/2fa/status - Ver estado de 2FA',
               ],
             },
           ],
@@ -665,7 +687,6 @@ const ChangelogPage: React.FC = () => {
                 'Nuevo sistema de diseño con glassmorphism mejorado',
                 'Animaciones suaves y transiciones optimizadas',
                 'Componentes reutilizables con Tailwind CSS',
-                'Experiencia de usuario fluida en todas las páginas',
               ],
             },
             {
@@ -674,7 +695,6 @@ const ChangelogPage: React.FC = () => {
                 'Adaptación perfecta a todos los tamaños de pantalla',
                 'Menús colapsables en dispositivos móviles',
                 'Gestos táctiles para navegación',
-                'Optimización para tablets y smartphones',
               ],
             },
             {
@@ -682,7 +702,6 @@ const ChangelogPage: React.FC = () => {
               subItems: [
                 'Transiciones suaves entre temas',
                 'Persistencia de preferencia del usuario',
-                'Colores optimizados para cada tema',
                 'Soporte para tema del sistema',
               ],
             },
@@ -703,7 +722,6 @@ const ChangelogPage: React.FC = () => {
                 'Inicio de sesión con huella dactilar, Face ID y Windows Hello',
                 'Registro de múltiples dispositivos biométricos por usuario',
                 'Tokens JWT HS256 para sesiones biométricas',
-                'Verificación criptográfica con @simplewebauthn/server',
               ],
             },
             {
@@ -711,290 +729,7 @@ const ChangelogPage: React.FC = () => {
               subItems: [
                 'Login y registro con Supabase Auth',
                 'Tokens ES256 generados por Supabase',
-                'Mismo usuario ve sus notas sin importar el método',
                 'Sincronización perfecta entre ambos métodos',
-              ],
-            },
-            {
-              description: '🔄 Middleware unificado de autenticación',
-              subItems: [
-                'Soporte para tokens HS256 (passkey) y ES256 (Supabase)',
-                'Verificación dual con jwt.verify() y supabase.auth.getUser()',
-                'Extracción consistente de userId del token',
-                'Cliente Supabase unificado con el token del usuario',
-              ],
-            },
-          ],
-        },
-        {
-          title: '🛡️ Seguridad y Aislamiento de Datos',
-          icon: (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-            </svg>
-          ),
-          color: '#10B981',
-          items: [
-            {
-              description: '🔒 Políticas RLS implementadas correctamente',
-              subItems: [
-                'Aislamiento total de notas entre usuarios',
-                'Usuario 1 no puede ver notas del Usuario 2 y viceversa',
-                'Políticas para SELECT, INSERT, UPDATE y DELETE',
-                'Verificación con auth.uid() = user_id',
-              ],
-            },
-            {
-              description: '🗑️ Soft delete con columna deleted_at',
-              subItems: [
-                'Mover notas a papelera sin eliminarlas permanentemente',
-                'Restaurar notas desde la papelera',
-                'Filtrado de notas activas vs eliminadas',
-              ],
-            },
-            {
-              description: '🔐 Manejo seguro de tokens',
-              subItems: [
-                'Tokens con expiración de 7 días',
-                'Almacenamiento seguro en localStorage',
-                'Limpieza automática al cerrar sesión',
-                'Verificación de tokens en cada petición',
-              ],
-            },
-          ],
-        },
-        {
-          title: '⚙️ Backend y APIs Mejorados',
-          icon: (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
-            </svg>
-          ),
-          color: '#F59E0B',
-          items: [
-            {
-              description: '🌐 Servidor Express unificado',
-              subItems: [
-                'Middleware authenticateToken con soporte dual',
-                'Cliente getSupabaseClient para operaciones CRUD',
-                'Logs detallados de depuración',
-                'Manejo robusto de errores',
-              ],
-            },
-            {
-              description: '🗄️ Integración con Supabase',
-              subItems: [
-                'Uso de service role key para operaciones admin',
-                'Cliente autenticado para respetar RLS',
-                'Buckets de storage para avatares y banners',
-                'Políticas RLS configuradas correctamente',
-              ],
-            },
-            {
-              description: '📊 Logs de depuración mejorados',
-              subItems: [
-                'Logs detallados en servidor Node.js',
-                'Logs en consola del navegador con colores',
-                'Información de tokens y headers',
-                'Tiempos de respuesta de API',
-              ],
-            },
-          ],
-        },
-        {
-          title: '🐛 Correcciones Críticas v2.0.0',
-          icon: (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            </svg>
-          ),
-          color: '#EF4444',
-          items: [
-            {
-              description: '🔧 Corrección de RLS para notas',
-              subItems: [
-                'Solución al error "new row violates row-level security policy"',
-                'Implementación de políticas correctas para todas las operaciones',
-                'Uso de cliente autenticado con token del usuario',
-              ],
-            },
-            {
-              description: '🔄 Unificación de tokens de autenticación',
-              subItems: [
-                'Tokens HS256 (passkey) y ES256 (Supabase) funcionando juntos',
-                'Middleware que verifica ambos tipos de token',
-                'Mismo usuario ve sus notas sin importar el método',
-              ],
-            },
-            {
-              description: '📝 Corrección en creación de notas',
-              subItems: [
-                'Asignación correcta de user_id desde el token',
-                'Validación de datos antes de insertar',
-                'Manejo de errores mejorado',
-              ],
-            },
-            {
-              description: '🎨 Mejoras en UI/UX',
-              subItems: [
-                'Pantalla de bienvenida después de login',
-                'Redirecciones correctas en todos los flujos',
-                'Mensajes de error más descriptivos',
-                'Animaciones suaves sin conflictos',
-              ],
-            },
-          ],
-        },
-        {
-          title: '📦 Dependencias Actualizadas v2.0.0',
-          icon: (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
-            </svg>
-          ),
-          color: '#6366F1',
-          items: [
-            {
-              description: '📦 Backend',
-              subItems: [
-                '@supabase/supabase-js: ^2.99.0',
-                '@simplewebauthn/server: ^13.2.3',
-                'express: ^5.2.1',
-                'jsonwebtoken: ^9.0.3',
-              ],
-            },
-            {
-              description: '📦 Frontend',
-              subItems: [
-                'react: ^18.2.0',
-                '@simplewebauthn/browser: ^13.2.2',
-                'framer-motion: ^12.35.1',
-                'tailwindcss: ^3.4.1',
-              ],
-            },
-          ],
-        },
-      ],
-    },
-    {
-      version: '1.4.0',
-      date: '08 Mar 2026',
-      title: '🔐 Autenticación Biométrica y Mejoras de Perfil',
-      gradientColors: ['#3B82F6', '#10B981'],
-      changes: [
-        {
-          title: '🔑 Autenticación Biométrica (WebAuthn)',
-          icon: (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" />
-            </svg>
-          ),
-          color: '#3B82F6',
-          items: [
-            {
-              description: '🖐️ Implementación inicial de WebAuthn',
-              subItems: [
-                'Soporte para huella dactilar y Face ID',
-                'Registro de dispositivos biométricos',
-                'Fallback a contraseña si no hay biometría',
-              ],
-            },
-          ],
-        },
-      ],
-    },
-    {
-      version: '1.3.0',
-      date: '07 Mar 2026',
-      title: '🔐 Sistema de Autenticación y Recuperación de Contraseña',
-      gradientColors: ['#3B82F6', '#EC4899'],
-      changes: [
-        {
-          title: '🔐 Sistema de Autenticación Completo',
-          icon: (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-          ),
-          color: '#3B82F6',
-          items: [
-            {
-              description: '🔑 Flujo completo de autenticación con Supabase',
-              subItems: [
-                'Login con email y contraseña',
-                'Registro de nuevos usuarios',
-                'Recuperación de contraseña con email',
-              ],
-            },
-          ],
-        },
-      ],
-    },
-    {
-      version: '1.2.0',
-      date: '07 Mar 2026',
-      title: '🔐 Autenticación y Perfiles de Usuario',
-      gradientColors: ['#3B82F6', '#EC4899'],
-      changes: [
-        {
-          title: '🔐 Sistema de Autenticación',
-          icon: (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-          ),
-          color: '#3B82F6',
-          items: [
-            {
-              description: '🔑 Autenticación básica con Supabase',
-              subItems: [
-                'Login con email y contraseña',
-                'Registro de nuevos usuarios',
-              ],
-            },
-          ],
-        },
-        {
-          title: '👤 Perfil de Usuario',
-          icon: (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-          ),
-          color: '#8B5CF6',
-          items: [
-            {
-              description: '📱 Página de perfil básica',
-              subItems: [
-                'Banner de usuario',
-                'Avatar circular',
-                'Estadísticas de usuario',
-              ],
-            },
-          ],
-        },
-      ],
-    },
-    {
-      version: '1.1.0',
-      date: '05 Mar 2026',
-      title: '🚀 Integración con Supabase y Mejoras Visuales',
-      gradientColors: ['#3B82F6', '#8B5CF6'],
-      changes: [
-        {
-          title: '📦 Base de datos y Backend',
-          icon: (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
-            </svg>
-          ),
-          color: '#10B981',
-          items: [
-            {
-              description: '🔄 Migración inicial a Supabase',
-              subItems: [
-                'Integración básica con Supabase',
-                'Migración de IDs a UUIDs',
               ],
             },
           ],
@@ -1022,6 +757,7 @@ const ChangelogPage: React.FC = () => {
               subItems: [
                 'CRUD básico de notas',
                 'Vista grid y lista',
+                'Modo oscuro/claro',
               ],
             },
           ],
@@ -1032,13 +768,13 @@ const ChangelogPage: React.FC = () => {
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'dark bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800' : 'bg-gradient-to-br from-gray-50 via-white to-gray-100'}`}>
-      {/* Header con efecto glassmorphism */}
+      {/* Header con efecto glassmorphism - Responsive */}
       <div className="sticky top-0 z-20 backdrop-blur-xl bg-white/70 dark:bg-gray-900/70 border-b border-gray-200/50 dark:border-gray-700/50 shadow-lg">
-        <div className="max-w-5xl mx-auto px-6 py-5">
-          <div className="flex items-center gap-4">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 sm:py-5">
+          <div className="flex items-center gap-3 sm:gap-4">
             <button
               onClick={() => navigate('/settings')}
-              className="group p-2.5 hover:bg-gray-200/80 dark:hover:bg-gray-800/80 rounded-xl transition-all duration-300 hover:scale-105 active:scale-95"
+              className="group p-2 hover:bg-gray-200/80 dark:hover:bg-gray-800/80 rounded-xl transition-all duration-300 hover:scale-105 active:scale-95"
               aria-label="Volver a configuración"
               title="Volver"
             >
@@ -1047,10 +783,10 @@ const ChangelogPage: React.FC = () => {
               </svg>
             </button>
             <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
+              <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
                 Historial de Cambios
               </h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-0.5">
                 Evolución y mejoras de QuickNote Web
               </p>
             </div>
@@ -1058,11 +794,11 @@ const ChangelogPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Lista de versiones */}
-      <div className="max-w-5xl mx-auto p-6 space-y-5">
+      {/* Lista de versiones - Responsive */}
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-5">
         {versions.map((version, index) => {
           const isExpanded = expandedVersions.has(version.version);
-          const isLatest = version.isLatest || index === 0;
+          const isLatest = version.isLatest || (index === 0 && version.version === '2.5.0');
           const gradientStart = version.gradientColors[0];
           const gradientEnd = version.gradientColors[1];
 
@@ -1072,7 +808,7 @@ const ChangelogPage: React.FC = () => {
               className={`
                 relative overflow-hidden transition-all duration-500 ease-out
                 ${isExpanded ? 'scale-100' : 'hover:scale-[1.01] hover:shadow-2xl'}
-                rounded-2xl
+                rounded-xl sm:rounded-2xl
                 ${isDarkMode 
                   ? 'bg-gradient-to-br from-gray-800/80 via-gray-800/60 to-gray-900/80' 
                   : 'bg-gradient-to-br from-white/90 via-white/80 to-gray-50/90'
@@ -1092,23 +828,23 @@ const ChangelogPage: React.FC = () => {
               {/* Efectos decorativos para versión latest */}
               {isLatest && (
                 <>
-                  <div className="absolute -top-20 -right-20 w-60 h-60 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-full blur-3xl animate-pulse" />
-                  <div className="absolute -bottom-20 -left-20 w-60 h-60 bg-gradient-to-tr from-blue-500/20 to-teal-500/20 rounded-full blur-3xl animate-pulse" />
+                  <div className="absolute -top-20 -right-20 w-40 h-40 sm:w-60 sm:h-60 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-full blur-3xl animate-pulse" />
+                  <div className="absolute -bottom-20 -left-20 w-40 h-40 sm:w-60 sm:h-60 bg-gradient-to-tr from-blue-500/20 to-teal-500/20 rounded-full blur-3xl animate-pulse" />
                   <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-purple-500 to-transparent" />
                 </>
               )}
 
-              {/* Header de la versión - Ahora con onClick para toggle */}
+              {/* Header de la versión */}
               <div
-                className="relative p-6 cursor-pointer select-none"
+                className="relative p-4 sm:p-6 cursor-pointer select-none"
                 onClick={() => toggleVersion(version.version)}
               >
-                <div className="flex items-center justify-between flex-wrap gap-3">
-                  <div className="flex items-center gap-3 flex-wrap">
-                    {/* Badge de versión con gradiente animado */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                    {/* Badge de versión */}
                     <div
                       className={`
-                        px-5 py-2.5 rounded-full text-white font-bold text-sm
+                        px-3 sm:px-5 py-1.5 sm:py-2.5 rounded-full text-white font-bold text-xs sm:text-sm
                         transition-all duration-500
                         ${isExpanded ? 'scale-110 shadow-2xl' : 'shadow-lg hover:shadow-xl'}
                         relative overflow-hidden group
@@ -1124,29 +860,29 @@ const ChangelogPage: React.FC = () => {
                     </div>
 
                     {/* Fecha */}
-                    <div className="flex items-center gap-2 px-4 py-2 bg-gray-200/50 dark:bg-gray-700/50 backdrop-blur-sm rounded-full border border-gray-300/30 dark:border-gray-600/30">
-                      <svg className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-200/50 dark:bg-gray-700/50 backdrop-blur-sm rounded-full border border-gray-300/30 dark:border-gray-600/30">
+                      <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
-                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                      <span className="text-[11px] sm:text-xs font-medium text-gray-700 dark:text-gray-300">
                         {version.date}
                       </span>
                     </div>
 
-                    {/* Badge "Latest" animado */}
+                    {/* Badge "Latest" */}
                     {isLatest && (
-                      <div className="px-3 py-1.5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full text-white text-xs font-bold shadow-lg animate-pulse">
+                      <div className="px-2 sm:px-3 py-1 sm:py-1.5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full text-white text-[10px] sm:text-xs font-bold shadow-lg animate-pulse">
                         ✨ Última versión
                       </div>
                     )}
                   </div>
 
-                  {/* Botón de expandir/colapsar - con stopPropagation */}
+                  {/* Botón expandir/colapsar */}
                   <button
                     onClick={(e) => toggleVersion(version.version, e)}
                     className={`
-                      p-3 rounded-full transition-all duration-500 cursor-pointer
-                      hover:scale-110 active:scale-95
+                      p-2 sm:p-3 rounded-full transition-all duration-500 cursor-pointer
+                      hover:scale-110 active:scale-95 self-start sm:self-auto
                       ${isExpanded 
                         ? `bg-gradient-to-r from-${gradientStart}/20 to-${gradientEnd}/20 shadow-lg` 
                         : 'bg-gray-200/50 dark:bg-gray-700/50 hover:bg-gray-300/50 dark:hover:bg-gray-600/50'
@@ -1156,7 +892,7 @@ const ChangelogPage: React.FC = () => {
                     title={isExpanded ? "Colapsar" : "Expandir"}
                   >
                     <svg
-                      className={`w-5 h-5 transition-all duration-500 ${isExpanded ? 'rotate-180' : 'rotate-0'}`}
+                      className={`w-4 h-4 sm:w-5 sm:h-5 transition-all duration-500 ${isExpanded ? 'rotate-180' : 'rotate-0'}`}
                       style={{ color: isExpanded ? gradientStart : undefined }}
                       fill="none"
                       stroke="currentColor"
@@ -1167,29 +903,29 @@ const ChangelogPage: React.FC = () => {
                   </button>
                 </div>
 
-                {/* Título de la versión - aparece al expandir */}
+                {/* Título de la versión */}
                 <div
                   className={`
                     overflow-hidden transition-all duration-500 ease-in-out
-                    ${isExpanded ? 'max-h-32 opacity-100 mt-4' : 'max-h-0 opacity-0'}
+                    ${isExpanded ? 'max-h-32 opacity-100 mt-3 sm:mt-4' : 'max-h-0 opacity-0'}
                   `}
                 >
                   <div
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl"
+                    className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-1.5 sm:py-2.5 rounded-xl"
                     style={{
                       backgroundColor: `${gradientStart}15`,
                       border: `1px solid ${gradientStart}25`,
                       backdropFilter: 'blur(8px)',
                     }}
                   >
-                    <span className="text-sm font-medium" style={{ color: gradientStart }}>
+                    <span className="text-xs sm:text-sm font-medium" style={{ color: gradientStart }}>
                       {version.title}
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Contenido expandible - Scroll suave */}
+              {/* Contenido expandible */}
               <div
                 ref={(el) => {
                   if (el) contentRefs.current.set(version.version, el);
@@ -1197,27 +933,23 @@ const ChangelogPage: React.FC = () => {
                 }}
                 className={`
                   overflow-y-auto transition-all duration-500 ease-in-out
-                  ${isExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}
+                  ${isExpanded ? 'max-h-[1200px] sm:max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}
                   custom-scrollbar
                 `}
-                style={{
-                  scrollbarWidth: 'thin',
-                  scrollbarColor: `${gradientStart} transparent`,
-                }}
               >
-                <div className="px-6 pb-6">
-                  <div className="space-y-6">
+                <div className="px-4 sm:px-6 pb-4 sm:pb-6">
+                  <div className="space-y-4 sm:space-y-6">
                     {version.changes.map((category, catIndex) => (
                       <div
                         key={catIndex}
-                        className="space-y-3 transform transition-all duration-500 hover:translate-x-1"
+                        className="space-y-2 sm:space-y-3 transform transition-all duration-500 hover:translate-x-1"
                         style={{
                           animation: `slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) ${catIndex * 0.08}s both`,
                         }}
                       >
                         {/* Título de categoría sticky */}
                         <div 
-                          className="flex items-center gap-3 group sticky top-0 py-2 z-10 rounded-lg"
+                          className="flex items-center gap-2 sm:gap-3 group sticky top-0 py-1.5 sm:py-2 z-10 rounded-lg"
                           style={{
                             backgroundColor: isDarkMode ? 'rgba(17, 24, 39, 0.95)' : 'rgba(249, 250, 251, 0.95)',
                             backdropFilter: 'blur(12px)',
@@ -1225,7 +957,7 @@ const ChangelogPage: React.FC = () => {
                         >
                           <div
                             className={`
-                              p-2.5 rounded-xl transition-all duration-300
+                              p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl transition-all duration-300
                               group-hover:scale-110 group-hover:shadow-lg
                             `}
                             style={{
@@ -1237,18 +969,18 @@ const ChangelogPage: React.FC = () => {
                               {category.icon}
                             </span>
                           </div>
-                          <h3 className="font-bold text-gray-800 dark:text-gray-200 text-lg">
+                          <h3 className="font-bold text-gray-800 dark:text-gray-200 text-sm sm:text-lg">
                             {category.title}
                           </h3>
                           <div className="flex-1 h-px bg-gradient-to-r from-gray-300 to-transparent dark:from-gray-700" />
                         </div>
 
                         {/* Items de la categoría */}
-                        <div className="space-y-3 pl-6">
+                        <div className="space-y-2 sm:space-y-3 pl-3 sm:pl-6">
                           {category.items.map((item, itemIndex) => (
                             <div
                               key={itemIndex}
-                              className="group/item p-4 rounded-xl transition-all duration-300 hover:shadow-xl hover:scale-[1.01]"
+                              className="group/item p-3 sm:p-4 rounded-lg sm:rounded-xl transition-all duration-300 hover:shadow-xl hover:scale-[1.01]"
                               style={{
                                 backgroundColor: isDarkMode ? 'rgba(31, 41, 55, 0.6)' : 'rgba(255, 255, 255, 0.8)',
                                 border: `1px solid ${category.color}20`,
@@ -1256,13 +988,13 @@ const ChangelogPage: React.FC = () => {
                               }}
                             >
                               {/* Descripción principal */}
-                              <div className="flex items-start gap-3">
+                              <div className="flex items-start gap-2 sm:gap-3">
                                 <div
-                                  className="p-1.5 rounded-lg mt-0.5 transition-all duration-300 group-hover/item:scale-110"
+                                  className="p-1 rounded-lg mt-0.5 transition-all duration-300 group-hover/item:scale-110"
                                   style={{ backgroundColor: `${category.color}25` }}
                                 >
                                   <svg
-                                    className="w-3.5 h-3.5 transition-transform duration-300 group-hover/item:translate-x-0.5"
+                                    className="w-3 h-3 sm:w-3.5 sm:h-3.5 transition-transform duration-300 group-hover/item:translate-x-0.5"
                                     style={{ color: category.color }}
                                     fill="none"
                                     stroke="currentColor"
@@ -1271,21 +1003,21 @@ const ChangelogPage: React.FC = () => {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                                   </svg>
                                 </div>
-                                <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                                <span className="text-xs sm:text-sm font-semibold text-gray-800 dark:text-gray-200">
                                   {item.description}
                                 </span>
                               </div>
 
-                              {/* Sub-items con viñetas animadas */}
+                              {/* Sub-items */}
                               {item.subItems && item.subItems.length > 0 && (
-                                <div className="mt-3 ml-10 space-y-2">
+                                <div className="mt-2 sm:mt-3 ml-6 sm:ml-10 space-y-1.5 sm:space-y-2">
                                   {item.subItems.map((subItem, subIndex) => (
                                     <div
                                       key={subIndex}
-                                      className="flex items-start gap-2.5 text-xs group/sub transition-all duration-200 hover:translate-x-1"
+                                      className="flex items-start gap-2 text-[11px] sm:text-xs group/sub transition-all duration-200 hover:translate-x-1"
                                     >
                                       <span
-                                        className="w-1.5 h-1.5 rounded-full mt-1.5 transition-all duration-300 group-hover/sub:scale-150 group-hover/sub:shadow-lg"
+                                        className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full mt-1.5 sm:mt-1.5 transition-all duration-300 group-hover/sub:scale-150"
                                         style={{ backgroundColor: category.color }}
                                       />
                                       <span className="text-gray-600 dark:text-gray-400 group-hover/sub:text-gray-800 dark:group-hover/sub:text-gray-200 transition-colors duration-300">
@@ -1304,14 +1036,14 @@ const ChangelogPage: React.FC = () => {
                     {/* Badge de versión inicial */}
                     {version.isInitial && (
                       <div
-                        className="mt-6 p-6 rounded-xl text-center transform transition-all duration-500 hover:scale-[1.02] animate-pulse"
+                        className="mt-4 sm:mt-6 p-4 sm:p-6 rounded-xl text-center transform transition-all duration-500 hover:scale-[1.02] animate-pulse"
                         style={{
                           background: `linear-gradient(135deg, ${gradientStart}15, ${gradientEnd}15)`,
                           border: `1px solid ${gradientStart}30`,
                           backdropFilter: 'blur(8px)',
                         }}
                       >
-                        <span className="text-base font-bold" style={{ color: gradientStart }}>
+                        <span className="text-sm sm:text-base font-bold" style={{ color: gradientStart }}>
                           🎉 El comienzo de QuickNote Web 🎉
                         </span>
                       </div>
@@ -1339,7 +1071,15 @@ const ChangelogPage: React.FC = () => {
 
         /* Custom scrollbar premium */
         .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
+          width: 4px;
+          height: 4px;
+        }
+        
+        @media (min-width: 640px) {
+          .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+          }
         }
 
         .custom-scrollbar::-webkit-scrollbar-track {

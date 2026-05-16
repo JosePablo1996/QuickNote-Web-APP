@@ -15,6 +15,7 @@ import SelectiveBackupModal from './contexts/components/backup/SelectiveBackupMo
 import NotesPage from './pages/NotesPage';
 import NoteDetailPage from './pages/NoteDetailPage';
 import NoteFormPage from './pages/NoteFormPage';
+import NoteCustomizePage from './pages/NoteCustomizePage';
 import ArchivedPage from './pages/ArchivedPage';
 import FavoritesPage from './pages/FavoritesPage';
 import TrashPage from './pages/TrashPage';
@@ -240,7 +241,11 @@ function App() {
           }
         />
 
-        {/* Crear nueva nota */}
+        {/* ======================================== */}
+        {/* RUTAS DE CREACIÓN Y PERSONALIZACIÓN */}
+        {/* ======================================== */}
+
+        {/* Crear nueva nota - Formulario simplificado */}
         <Route
           path="/notes/new"
           element={
@@ -250,7 +255,17 @@ function App() {
           }
         />
 
-        {/* Editar nota */}
+        {/* Personalizar nueva nota - Configuración visual */}
+        <Route
+          path="/notes/new/customize"
+          element={
+            <ProtectedRoute>
+              <NoteCustomizePage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Editar nota - Formulario simplificado */}
         <Route
           path="/notes/:id/edit"
           element={
@@ -259,6 +274,20 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* Personalizar nota existente - Configuración visual */}
+        <Route
+          path="/notes/:id/edit/customize"
+          element={
+            <ProtectedRoute>
+              <NoteCustomizePage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ======================================== */}
+        {/* OTRAS RUTAS PROTEGIDAS */}
+        {/* ======================================== */}
 
         {/* Notas archivadas */}
         <Route

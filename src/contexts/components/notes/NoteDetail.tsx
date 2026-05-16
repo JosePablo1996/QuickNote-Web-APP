@@ -3,10 +3,8 @@
 // DEPENDENCIAS
 // ============================================================================
 import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowLeft,
   Star,
   Archive,
   Edit,
@@ -14,8 +12,6 @@ import {
   Calendar,
   Clock,
   Tag as TagIcon,
-  MoreVertical,
-  AlertCircle,
   XCircle,
   Sparkles,
   GripVertical,
@@ -23,8 +19,10 @@ import {
   Shapes,
   Eye,
   Hash,
+  Copy,
+  Check,
+  Palette
 } from 'lucide-react';
-
 // ============================================================================
 // HOOKS Y UTILIDADES
 // ============================================================================
@@ -32,10 +30,7 @@ import { Note } from '../../../models/Note';
 import { formatDateTime, getInitials } from '../../../utils/noteUtils';
 import { getNoteColorClasses, getNoteGradient, DEFAULT_COLOR } from '../../../utils/noteColors';
 import { getColorWithOpacity } from '../../../models/Note';
-import { useToast } from '../../../hooks/useToast';
 import TagChip from '../tags/TagChip';
-import NoteActionsMenu from './NoteActionsMenu';
-
 // ============================================================================
 // MODELOS Y CONFIGURACIONES
 // ============================================================================
@@ -50,7 +45,6 @@ import {
   NoteSize,
   ColorIntensity,
 } from '../../../models/Note';
-
 // ============================================================================
 // TIPOS
 // ============================================================================
@@ -100,110 +94,11 @@ const getShapeLabel = (shape: string): string => {
   }
 };
 
-const getShapeStyle = (shape: string, color: string, size: number = 32) => {
-  let borderRadius = '0.75rem';
-  let width = size;
-  let height = size;
-  
-  switch (shape) {
-    case 'square': borderRadius = '0'; break;
-    case 'pill': borderRadius = '9999px'; break;
-    case 'oval': borderRadius = '50%'; width = size; height = size * 0.6; break;
-    default: borderRadius = '0.75rem'; break;
-  }
-  
-  return {
-    backgroundColor: `${color}20`,
-    borderRadius,
-    width: `${width}px`,
-    height: `${height}px`,
-  };
-};
-
 // ============================================================================
 // COMPONENTES INTERNOS
 // ============================================================================
 
-// Header con navegación y badges
-const DetailHeader: React.FC<{
-  note: Note;
-  noteColorHex: string;
-  intensityConfig: { borderOpacity: number };
-  noteIcon: NoteIcon;
-  iconConfig: { label: string };
-  noteSize: NoteSize;
-  sizeConfig: { label: string };
-  noteIntensity: ColorIntensity;
-  intensityConfigFull: { label: string; bgOpacity: number };
-  noteShape: string;
-  onBack: () => void;
-  onShare: () => void;
-}> = ({ 
-  note, noteColorHex, intensityConfig, noteIcon, iconConfig, 
-  noteSize, sizeConfig, noteIntensity, intensityConfigFull, noteShape, 
-  onBack, onShare 
-}) => (
-  <div className="sticky top-0 z-10 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border-b border-gray-200 dark:border-gray-700">
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="flex items-center justify-between h-16">
-        {/* Lado izquierdo */}
-        <div className="flex items-center gap-4">
-          <motion.button
-            whileHover={{ scale: 1.05, x: -2 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={onBack}
-            className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group"
-          >
-            <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-gray-900" />
-          </motion.button>
-          
-          <div className="flex items-center gap-3">
-            <div 
-              className="w-2 h-8 rounded-full"
-              style={{ background: `linear-gradient(to bottom, ${noteColorHex}, ${getColorWithOpacity(noteColorHex, intensityConfig.borderOpacity)})` }}
-            />
-            <h1 className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-              Detalle de Nota
-            </h1>
-          </div>
-        </div>
-
-        {/* Lado derecho - Badges */}
-        <div className="flex items-center gap-2">
-          <AnimatePresence>
-            {note.is_favorite && (
-              <StatusBadge icon={<Star className="w-3.5 h-3.5 fill-white" />} label="Favorita" color="from-yellow-400 to-amber-500" />
-            )}
-            {note.is_archived && (
-              <StatusBadge icon={<Archive className="w-3.5 h-3.5" />} label="Archivada" color="from-purple-400 to-purple-600" />
-            )}
-            {noteIcon !== 'default' && (
-              <CustomBadge icon={getNoteIcon(noteIcon, "w-3 h-3")} label={iconConfig.label} color={noteColorHex} />
-            )}
-            {noteSize !== 'normal' && (
-              <CustomBadge icon={<GripVertical className="w-3 h-3" />} label={sizeConfig.label} color={noteColorHex} />
-            )}
-            {noteIntensity !== 'medium' && (
-              <CustomBadge 
-                icon={<Droplet className="w-3 h-3" />} 
-                label={intensityConfigFull.label} 
-                color={noteColorHex}
-                tooltip={`Intensidad: ${intensityConfigFull.label} (${Math.round(intensityConfigFull.bgOpacity * 100)}% fondo)`}
-              />
-            )}
-            {noteShape !== 'rounded' && (
-              <CustomBadge icon={<Shapes className="w-3 h-3" />} label={getShapeLabel(noteShape)} color={noteColorHex} />
-            )}
-          </AnimatePresence>
-
-          <NoteActionsMenu note={note} onShare={onShare} />
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
-// Badge de estado
+// Badge de estado (Favorita/Archivada)
 const StatusBadge: React.FC<{ icon: React.ReactNode; label: string; color: string }> = ({ icon, label, color }) => (
   <motion.div
     initial={{ scale: 0, opacity: 0 }}
@@ -231,8 +126,18 @@ const CustomBadge: React.FC<{ icon: React.ReactNode; label: string; color: strin
   </motion.div>
 );
 
+// Badge de fecha
+const DateBadge: React.FC<{ icon: React.ReactNode; label: string; date: string; color: string }> = ({ icon, label, date, color }) => (
+  <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ backgroundColor: `${color}10` }}>
+    {React.cloneElement(icon as React.ReactElement, { style: { color } })}
+    <span className="text-sm text-gray-600 dark:text-gray-400">
+      {label}: <span className="font-medium text-gray-900 dark:text-gray-200">{formatDateTime(date)}</span>
+    </span>
+  </div>
+);
+
 // ============================================================================
-// TARJETA PRINCIPAL DE LA NOTA
+// TARJETA PRINCIPAL DE LA NOTA (CON BADGES INTEGRADOS)
 // ============================================================================
 const MainNoteCard: React.FC<{
   note: Note;
@@ -301,9 +206,23 @@ const MainNoteCard: React.FC<{
 
           {/* Título y metadata */}
           <div className="flex-1">
-            <h2 className={`font-bold mb-4 ${getTitleSizeClass(noteSize)}`} style={{ color: noteColorHex }}>
-              {note.title}
-            </h2>
+            <div className="flex flex-wrap items-center gap-3 mb-4">
+              <h2 className={`font-bold ${getTitleSizeClass(noteSize)}`} style={{ color: noteColorHex }}>
+                {note.title}
+              </h2>
+              {/* Badges de estado integrados aquí */}
+              <div className="flex flex-wrap items-center gap-2">
+                <AnimatePresence>
+                  {note.is_favorite && (
+                    <StatusBadge icon={<Star className="w-3.5 h-3.5 fill-white" />} label="Favorita" color="from-yellow-400 to-amber-500" />
+                  )}
+                  {note.is_archived && (
+                    <StatusBadge icon={<Archive className="w-3.5 h-3.5" />} label="Archivada" color="from-purple-400 to-purple-600" />
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+            
             <div className="flex flex-wrap items-center gap-3">
               <DateBadge icon={<Calendar className="w-4 h-4" />} label="Creada" date={note.created_at} color={noteColorHex} />
               {note.updated_at && note.updated_at !== note.created_at && (
@@ -316,16 +235,6 @@ const MainNoteCard: React.FC<{
     </motion.div>
   );
 };
-
-// Badge de fecha
-const DateBadge: React.FC<{ icon: React.ReactNode; label: string; date: string; color: string }> = ({ icon, label, date, color }) => (
-  <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ backgroundColor: `${color}10` }}>
-    {React.cloneElement(icon as React.ReactElement, { style: { color } })}
-    <span className="text-sm text-gray-600 dark:text-gray-400">
-      {label}: <span className="font-medium text-gray-900 dark:text-gray-200">{formatDateTime(date)}</span>
-    </span>
-  </div>
-);
 
 // ============================================================================
 // TARJETA DE CONTENIDO
@@ -400,98 +309,126 @@ const ContentCard: React.FC<{
 };
 
 // ============================================================================
+// PANEL DE INFORMACIÓN (ID de Nota)
+// ============================================================================
+const InfoPanel: React.FC<{
+  note: Note;
+  noteColorHex: string;
+  onTagClick?: (tag: string) => void;
+}> = ({ note, noteColorHex, onTagClick }) => {
+  const [copiedId, setCopiedId] = useState(false);
+
+  const handleCopyId = () => {
+    navigator.clipboard.writeText(note.id);
+    setCopiedId(true);
+    setTimeout(() => setCopiedId(false), 2000);
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.3, delay: 0.2 }}
+      className="relative overflow-hidden rounded-2xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border border-gray-200 dark:border-gray-700 shadow-xl p-6 h-full"
+    >
+      <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent" />
+      <div className="relative z-10">
+        <h3 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-6">
+          Información
+        </h3>
+
+        {/* ID de la Nota */}
+        <div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 font-medium">ID de la Nota</p>
+          <div 
+            className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 group hover:border-blue-300 dark:hover:border-blue-700 transition-all cursor-pointer"
+            onClick={handleCopyId}
+          >
+            <Hash className="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors" />
+            <code className="text-xs font-mono text-gray-600 dark:text-gray-300 truncate flex-1 select-all">
+              {note.id}
+            </code>
+            {copiedId ? (
+              <Check className="w-4 h-4 text-green-500" />
+            ) : (
+              <Copy className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-all" />
+            )}
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+// ============================================================================
 // PANEL DE ACCIONES RÁPIDAS
 // ============================================================================
 const QuickActionsPanel: React.FC<{
   note: Note;
   noteColorHex: string;
-  intensityConfig: { shadowIntensity: number };
   onToggleFavorite: () => void;
   onToggleArchive: () => void;
   onEdit: () => void;
   onDeleteClick: () => void;
-}> = ({ note, noteColorHex, intensityConfig, onToggleFavorite, onToggleArchive, onEdit, onDeleteClick }) => {
+}> = ({ note, noteColorHex, onToggleFavorite, onToggleArchive, onEdit, onDeleteClick }) => {
   const actions = useMemo(() => [
     {
+      id: 'edit',
+      label: 'Editar',
+      icon: <Edit className="w-6 h-6" />,
+      color: 'text-blue-500 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 border-blue-100 dark:border-blue-800',
+      onClick: onEdit
+    },
+    {
       id: 'favorite',
-      label: note.is_favorite ? 'Quitar de favoritos' : 'Añadir a favoritos',
-      description: note.is_favorite ? 'Eliminar de la lista de favoritos' : 'Marcar como nota favorita',
-      icon: <Star className="w-5 h-5" />,
-      active: note.is_favorite,
-      activeColor: 'from-yellow-400 to-amber-500',
-      activeTextColor: 'text-yellow-600 dark:text-yellow-400',
-      hoverBg: 'hover:from-yellow-50 hover:to-amber-50 dark:hover:from-yellow-900/20 dark:hover:to-amber-900/20',
-      hoverBorder: 'hover:border-yellow-200 dark:hover:border-yellow-800',
-      onClick: onToggleFavorite,
+      label: note.is_favorite ? 'Quitar Favorito' : 'Marcar Favorito',
+      icon: <Star className={`w-6 h-6 ${note.is_favorite ? 'fill-yellow-400 text-yellow-400' : ''}`} />,
+      color: note.is_favorite 
+        ? 'text-yellow-500 bg-yellow-50 dark:bg-yellow-900/20 dark:text-yellow-400 border-yellow-100 dark:border-yellow-800' 
+        : 'text-gray-500 bg-gray-50 dark:bg-gray-800/50 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 border-gray-100 dark:border-gray-700',
+      onClick: onToggleFavorite
     },
     {
       id: 'archive',
-      label: note.is_archived ? 'Desarchivar nota' : 'Archivar nota',
-      description: note.is_archived ? 'Restaurar a notas activas' : 'Mover a notas archivadas',
-      icon: <Archive className="w-5 h-5" />,
-      active: note.is_archived,
-      activeColor: 'from-teal-400 to-cyan-500',
-      activeTextColor: 'text-teal-600 dark:text-teal-400',
-      hoverBg: 'hover:from-teal-50 hover:to-cyan-50 dark:hover:from-teal-900/20 dark:hover:to-cyan-900/20',
-      hoverBorder: 'hover:border-teal-200 dark:hover:border-teal-800',
-      onClick: onToggleArchive,
-    },
-    {
-      id: 'edit',
-      label: 'Editar nota',
-      description: 'Modificar contenido y configuración',
-      icon: <Edit className="w-5 h-5" />,
-      active: false,
-      activeColor: 'from-blue-400 to-indigo-500',
-      activeTextColor: 'text-blue-600',
-      hoverBg: 'hover:from-blue-50 hover:to-indigo-50 dark:hover:from-blue-900/20 dark:hover:to-indigo-900/20',
-      hoverBorder: 'hover:border-blue-200 dark:hover:border-blue-800',
-      onClick: onEdit,
-      isPrimary: true,
+      label: note.is_archived ? 'Restaurar' : 'Archivar',
+      icon: <Archive className="w-6 h-6" />,
+      color: 'text-purple-500 bg-purple-50 dark:bg-purple-900/20 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/40 border-purple-100 dark:border-purple-800',
+      onClick: onToggleArchive
     },
     {
       id: 'delete',
-      label: 'Eliminar nota',
-      description: 'Esta acción no se puede deshacer',
-      icon: <Trash2 className="w-5 h-5" />,
-      active: false,
-      activeColor: 'from-red-400 to-rose-500',
-      activeTextColor: 'text-red-600 dark:text-red-400',
-      hoverBg: 'hover:from-red-50 hover:to-rose-50 dark:hover:from-red-900/20 dark:hover:to-rose-900/20',
-      hoverBorder: 'hover:border-red-200 dark:hover:border-red-800',
-      onClick: onDeleteClick,
-      isDestructive: true,
-    },
+      label: 'Eliminar',
+      icon: <Trash2 className="w-6 h-6" />,
+      color: 'text-red-500 bg-red-50 dark:bg-red-900/20 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 border-red-100 dark:border-red-800',
+      onClick: onDeleteClick
+    }
   ], [note.is_favorite, note.is_archived, onToggleFavorite, onToggleArchive, onEdit, onDeleteClick]);
 
   return (
     <motion.div
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.3, delay: 0.2 }}
-      className="relative overflow-hidden rounded-2xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border border-gray-200 dark:border-gray-700 shadow-xl"
-      style={{ boxShadow: `0 20px 40px -15px ${getColorWithOpacity(noteColorHex, intensityConfig.shadowIntensity)}` }}
+      transition={{ duration: 0.3, delay: 0.25 }}
+      className="relative overflow-hidden rounded-2xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border border-gray-200 dark:border-gray-700 shadow-xl p-6 h-full"
     >
       <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent" />
-      
-      <div className="relative z-10 p-6">
-        <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-200 dark:border-gray-700">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${noteColorHex}20, ${noteColorHex}05)`, border: `1px solid ${getColorWithOpacity(noteColorHex, 0.3)}` }}>
-            <MoreVertical className="w-5 h-5" style={{ color: noteColorHex }} />
-          </div>
-          <div>
-            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200">Acciones rápidas</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Gestiona tu nota</p>
-          </div>
-        </div>
+      <div className="relative z-10">
+        <h3 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-6">
+          Acciones Rápidas
+        </h3>
         
-        <div className="space-y-3">
+        <div className="grid grid-cols-2 gap-3">
           {actions.map((action) => (
-            <ActionButton
+            <motion.button
               key={action.id}
-              {...action}
-              colorHex={noteColorHex}
-            />
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={action.onClick}
+              className={`flex flex-col items-center justify-center gap-2 p-4 rounded-xl transition-all duration-200 border ${action.color}`}
+            >
+              {action.icon}
+              <span className="text-xs font-semibold">{action.label}</span>
+            </motion.button>
           ))}
         </div>
       </div>
@@ -499,46 +436,8 @@ const QuickActionsPanel: React.FC<{
   );
 };
 
-// Botón de acción individual
-const ActionButton: React.FC<{
-  label: string;
-  description: string;
-  icon: React.ReactNode;
-  active: boolean;
-  activeColor: string;
-  activeTextColor: string;
-  hoverBg: string;
-  hoverBorder: string;
-  onClick: () => void;
-  isDestructive?: boolean;
-  isPrimary?: boolean;
-  colorHex: string;
-}> = ({ label, description, icon, active, activeColor, activeTextColor, hoverBg, hoverBorder, onClick, isDestructive, isPrimary, colorHex }) => (
-  <motion.button
-    whileHover={{ scale: 1.02, x: 5 }}
-    whileTap={{ scale: 0.98 }}
-    onClick={onClick}
-    className={`w-full flex items-center gap-4 p-4 rounded-xl transition-all duration-200 group border border-transparent ${hoverBg} ${hoverBorder}`}
-  >
-    <div className={`p-3 rounded-xl transition-all duration-200 group-hover:scale-110 ${
-      active ? `bg-gradient-to-br ${activeColor} text-white shadow-lg` :
-      isPrimary ? `bg-gradient-to-br ${activeColor} text-white shadow-lg` :
-      isDestructive ? 'bg-gradient-to-br from-red-400 to-rose-500 text-white shadow-lg' :
-      'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
-    }`} style={!active && !isPrimary && !isDestructive ? { backgroundColor: `${colorHex}20`, color: colorHex } : undefined}>
-      {icon}
-    </div>
-    <div className="flex-1 text-left">
-      <p className={`font-semibold ${active ? activeTextColor : (isDestructive ? 'text-red-600 dark:text-red-400' : 'text-gray-700 dark:text-gray-300')}`}>
-        {label}
-      </p>
-      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{description}</p>
-    </div>
-  </motion.button>
-);
-
 // ============================================================================
-// PANEL DE PERSONALIZACIÓN
+// PANEL DE PERSONALIZACIÓN (Horizontal)
 // ============================================================================
 const PersonalizationPanel: React.FC<{
   note: Note;
@@ -549,6 +448,7 @@ const PersonalizationPanel: React.FC<{
   intensityConfig: { label: string; bgOpacity: number };
   noteShape: string;
 }> = ({ note, noteColorHex, noteIcon, iconConfig, sizeConfig, intensityConfig, noteShape }) => {
+  
   const personalizationItems = useMemo((): PersonalizationItem[] => [
     {
       id: 'icon',
@@ -556,11 +456,6 @@ const PersonalizationPanel: React.FC<{
       value: iconConfig.label,
       description: iconConfig.description,
       icon: getNoteIcon(noteIcon, "w-4 h-4"),
-      rightContent: (
-        <span className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: `${noteColorHex}15`, color: noteColorHex }}>
-          {iconConfig.label === 'Predeterminado' ? 'Nota estándar' : iconConfig.description}
-        </span>
-      ),
     },
     {
       id: 'size',
@@ -568,98 +463,70 @@ const PersonalizationPanel: React.FC<{
       value: sizeConfig.label,
       description: `${sizeConfig.minHeight} de altura`,
       icon: <GripVertical className="w-4 h-4" style={{ color: noteColorHex }} />,
-      rightContent: (
-        <span className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: `${noteColorHex}15`, color: noteColorHex }}>
-          {sizeConfig.minHeight}
-        </span>
-      ),
     },
     {
       id: 'intensity',
       label: 'Intensidad',
       value: intensityConfig.label,
-      description: `${Math.round(intensityConfig.bgOpacity * 100)}% de opacidad`,
+      description: `${Math.round(intensityConfig.bgOpacity * 100)}%`,
       icon: <Droplet className="w-4 h-4" style={{ color: noteColorHex }} />,
-      rightContent: (
-        <div className="flex gap-1">
-          <div className="w-6 h-1.5 rounded-full" style={{ backgroundColor: noteColorHex, opacity: 0.3 }} />
-          <div className="w-6 h-1.5 rounded-full" style={{ backgroundColor: noteColorHex, opacity: 0.6 }} />
-          <div className="w-6 h-1.5 rounded-full" style={{ backgroundColor: noteColorHex, opacity: 1 }} />
-        </div>
-      ),
     },
     {
       id: 'shape',
       label: 'Forma',
       value: getShapeLabel(noteShape),
-      description: noteShape === 'square' ? 'Bordes rectos' : noteShape === 'oval' ? 'Forma ovalada' : noteShape === 'pill' ? 'Forma de píldora' : 'Esquinas redondeadas',
+      description: 'Estilo visual',
       icon: <Shapes className="w-4 h-4" style={{ color: noteColorHex }} />,
-      rightContent: <div style={getShapeStyle(noteShape, noteColorHex, 32)} />,
+    },
+    {
+      id: 'color',
+      label: 'Color',
+      value: noteColorHex,
+      description: 'Hexadecimal',
+      icon: <Palette className="w-4 h-4" style={{ color: noteColorHex }} />,
+      rightContent: <div className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: noteColorHex }} />
     },
   ], [noteIcon, iconConfig, sizeConfig, intensityConfig, noteShape, noteColorHex]);
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.3, delay: 0.25 }}
-      className="relative overflow-hidden rounded-2xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border border-gray-200 dark:border-gray-700 shadow-xl"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: 0.3 }}
+      className="relative overflow-hidden rounded-2xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border border-gray-200 dark:border-gray-700 shadow-xl p-6"
     >
-      <div className="p-6">
-        <div className="flex items-center gap-3 mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${noteColorHex}15` }}>
-            <Eye className="w-4 h-4" style={{ color: noteColorHex }} />
-          </div>
-          <h3 className="font-bold text-gray-800 dark:text-gray-200">Personalización actual</h3>
+      <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent" />
+      <div className="relative z-10">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            Personalización Actual
+          </h3>
+          <span className="text-xs text-blue-500 dark:text-blue-400 font-medium flex items-center gap-1 cursor-pointer hover:underline">
+            Ver detalles <Eye className="w-3 h-3" />
+          </span>
         </div>
 
-        <div className="space-y-3">
+        {/* Grid Horizontal de Items */}
+        <div className="flex flex-wrap items-center gap-4 overflow-x-auto pb-2 -mx-2 px-2 scrollbar-hide">
           {personalizationItems.map((item) => (
-            <PersonalizationItemRow key={item.id} item={item} colorHex={noteColorHex} />
+            <div key={item.id} className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/30 min-w-[150px] border border-gray-100 dark:border-gray-700/50 shrink-0">
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${noteColorHex}20` }}>
+                {item.icon}
+              </div>
+              <div className="overflow-hidden">
+                <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wide">{item.label}</p>
+                <div className="flex items-center gap-2">
+                   <p className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate">{item.value}</p>
+                   {item.rightContent}
+                </div>
+              </div>
+            </div>
           ))}
         </div>
       </div>
     </motion.div>
   );
 };
-
-// Fila de personalización
-const PersonalizationItemRow: React.FC<{ item: PersonalizationItem; colorHex: string }> = ({ item, colorHex }) => (
-  <div className="flex items-center justify-between p-3 rounded-xl" style={{ backgroundColor: `${colorHex}08` }}>
-    <div className="flex items-center gap-3">
-      <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${colorHex}20` }}>
-        {item.icon}
-      </div>
-      <div>
-        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{item.label}</p>
-        <p className="text-xs text-gray-500 dark:text-gray-400">{item.value}</p>
-      </div>
-    </div>
-    {item.rightContent || <span className="text-xs text-gray-400">{item.description}</span>}
-  </div>
-);
-
-// ============================================================================
-// PANEL DE INFORMACIÓN ADICIONAL
-// ============================================================================
-const InfoPanel: React.FC<{ noteId: string; colorHex: string }> = ({ noteId, colorHex }) => (
-  <motion.div
-    initial={{ opacity: 0, x: 20 }}
-    animate={{ opacity: 1, x: 0 }}
-    transition={{ duration: 0.3, delay: 0.3 }}
-    className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 border border-gray-200 dark:border-gray-700 p-6"
-  >
-    <div className="flex items-start gap-3">
-      <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
-        <AlertCircle className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-      </div>
-      <div className="flex-1">
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">ID de la nota</p>
-        <p className="text-sm font-mono text-gray-800 dark:text-gray-200 break-all">{noteId}</p>
-      </div>
-    </div>
-  </motion.div>
-);
 
 // ============================================================================
 // MODAL DE CONFIRMACIÓN DE ELIMINACIÓN
@@ -685,7 +552,6 @@ const DeleteConfirmModal: React.FC<{
           className="absolute inset-0 bg-black/60 backdrop-blur-sm"
           onClick={onCancel}
         />
-
         <motion.div
           initial={{ scale: 0.9, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -753,14 +619,13 @@ const NoteDetail: React.FC<NoteDetailProps> = ({
   onTagClick,
   onShare,
 }) => {
-  const navigate = useNavigate();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
   const colors = getNoteColorClasses(note.color);
   const gradient = getNoteGradient(note.color);
   const noteColorHex = note.color || DEFAULT_COLOR;
   const initials = getInitials(note.title);
-
+  
   const noteIcon = (note.icon as NoteIcon) || 'default';
   const noteSize = (note.size as NoteSize) || 'normal';
   const noteIntensity = (note.colorIntensity as ColorIntensity) || 'medium';
@@ -770,78 +635,68 @@ const NoteDetail: React.FC<NoteDetailProps> = ({
   const sizeConfig = getSizeConfig(noteSize);
   const intensityConfig = getIntensityConfig(noteIntensity);
 
-  const handleBack = () => navigate(-1);
   const handleDeleteClick = () => setShowDeleteConfirm(true);
   const handleConfirmDelete = () => { onDelete(); setShowDeleteConfirm(false); };
   const handleCancelDelete = () => setShowDeleteConfirm(false);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-      {/* Header */}
-      <DetailHeader
-        note={note}
-        noteColorHex={noteColorHex}
-        intensityConfig={intensityConfig}
-        noteIcon={noteIcon}
-        iconConfig={iconConfig}
-        noteSize={noteSize}
-        sizeConfig={sizeConfig}
-        noteIntensity={noteIntensity}
-        intensityConfigFull={intensityConfig}
-        noteShape={noteShape}
-        onBack={handleBack}
-        onShare={onShare || (() => {})}
-      />
-
-      {/* Contenido principal */}
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 pb-12">
+      {/* Contenido principal - SIN HEADER DUPLICADO */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* Columna izquierda */}
-          <div className="lg:w-2/3 space-y-6">
-            <MainNoteCard
-              note={note}
-              noteColorHex={noteColorHex}
-              noteIcon={noteIcon}
-              noteSize={noteSize}
-              intensityConfig={intensityConfig}
-              sizeConfig={sizeConfig}
-              gradient={gradient}
-              initials={initials}
+        
+        {/* Columna Única para el contenido principal de la nota */}
+        <div className="space-y-6">
+          {/* Tarjeta Principal con Badges integrados (Favorita/Archivada) */}
+          <MainNoteCard
+            note={note}
+            noteColorHex={noteColorHex}
+            noteIcon={noteIcon}
+            noteSize={noteSize}
+            intensityConfig={intensityConfig}
+            sizeConfig={sizeConfig}
+            gradient={gradient}
+            initials={initials}
+          />
+          
+          {/* Tarjeta de Contenido */}
+          <ContentCard
+            note={note}
+            noteColorHex={noteColorHex}
+            intensityConfig={intensityConfig}
+            sizeConfig={sizeConfig}
+            noteShape={noteShape}
+            onTagClick={onTagClick}
+          />
+
+          {/* Fila Superior: Información (Izq) y Acciones (Der) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <InfoPanel 
+              note={note} 
+              noteColorHex={noteColorHex} 
+              onTagClick={onTagClick} 
             />
-            <ContentCard
+            
+            <QuickActionsPanel
               note={note}
               noteColorHex={noteColorHex}
-              intensityConfig={intensityConfig}
-              sizeConfig={sizeConfig}
-              noteShape={noteShape}
-              onTagClick={onTagClick}
+              onToggleFavorite={onToggleFavorite}
+              onToggleArchive={onToggleArchive}
+              onEdit={onEdit}
+              onDeleteClick={handleDeleteClick}
             />
           </div>
 
-          {/* Columna derecha */}
-          <div className="lg:w-1/3">
-            <div className="sticky top-24 space-y-4">
-              <QuickActionsPanel
-                note={note}
-                noteColorHex={noteColorHex}
-                intensityConfig={intensityConfig}
-                onToggleFavorite={onToggleFavorite}
-                onToggleArchive={onToggleArchive}
-                onEdit={onEdit}
-                onDeleteClick={handleDeleteClick}
-              />
-              <PersonalizationPanel
-                note={note}
-                noteColorHex={noteColorHex}
-                noteIcon={noteIcon}
-                iconConfig={iconConfig}
-                sizeConfig={sizeConfig}
-                intensityConfig={intensityConfig}
-                noteShape={noteShape}
-              />
-              <InfoPanel noteId={note.id} colorHex={noteColorHex} />
-            </div>
-          </div>
+          {/* Fila Inferior: Personalización Horizontal */}
+          <PersonalizationPanel
+            note={note}
+            noteColorHex={noteColorHex}
+            noteIcon={noteIcon}
+            iconConfig={iconConfig}
+            sizeConfig={sizeConfig}
+            intensityConfig={intensityConfig}
+            noteShape={noteShape}
+          />
+
         </div>
       </div>
 

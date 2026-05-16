@@ -83,6 +83,17 @@ const RightMenu: React.FC<RightMenuProps> = ({
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
   const [showShareMenu, setShowShareMenu] = useState(false);
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+
+  // Detectar ancho de pantalla
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const isMobile = windowWidth < 640;
+  const isTablet = windowWidth >= 640 && windowWidth < 1024;
 
   // Detectar cambios en fullscreen
   useEffect(() => {
@@ -213,6 +224,7 @@ const RightMenu: React.FC<RightMenuProps> = ({
       orange: 'from-orange-400 to-orange-600',
       cyan: 'from-cyan-400 to-cyan-600',
       emerald: 'from-emerald-400 to-emerald-600',
+      amber: 'from-amber-400 to-amber-600',
     };
     return gradients[color] || 'from-blue-400 to-purple-500';
   };
@@ -232,11 +244,12 @@ const RightMenu: React.FC<RightMenuProps> = ({
       orange: 'bg-orange-500/20',
       cyan: 'bg-cyan-500/20',
       emerald: 'bg-emerald-500/20',
+      amber: 'bg-amber-500/20',
     };
     return colors[color] || 'bg-blue-500/20';
   };
 
-  // Secciones del menú derecho - SIN el cambio de vista
+  // Secciones del menú derecho - SIN cambios en el contenido
   const menuSections: MenuSection[] = [
     {
       title: 'Apariencia',
@@ -396,11 +409,14 @@ const RightMenu: React.FC<RightMenuProps> = ({
     { icon: <ExternalLink className="w-4 h-4" />, label: 'Más', onClick: () => handleShare('more'), color: 'gray' },
   ];
 
+  // Ancho del menú responsivo
+  const menuWidth = isMobile ? 'w-full max-w-[300px]' : isTablet ? 'w-80' : 'w-96';
+
   if (!isOpen) return null;
 
   return (
     <>
-      {/* Overlay con efecto más sutil */}
+      {/* Overlay - se mantiene igual */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -412,41 +428,38 @@ const RightMenu: React.FC<RightMenuProps> = ({
         <div className="absolute inset-0 bg-black/40" />
       </motion.div>
 
-      {/* Menú lateral derecho */}
+      {/* Menú lateral derecho responsivo */}
       <motion.div
         initial={{ x: 400 }}
         animate={{ x: 0 }}
         exit={{ x: 400 }}
         transition={{ type: "spring", damping: 30, stiffness: 300 }}
         className={`
-          fixed top-0 right-0 h-full w-96 z-50 overflow-y-auto
-          ${isDarkMode 
-            ? 'bg-gray-900' 
-            : 'bg-white'
-          }
-          shadow-2xl rounded-l-3xl
+          fixed top-0 right-0 h-full ${menuWidth} z-50 overflow-y-auto
+          ${isDarkMode ? 'bg-gray-900' : 'bg-white'}
+          shadow-2xl rounded-l-xl sm:rounded-l-2xl md:rounded-l-3xl
         `}
       >
-        {/* Header del menú con gradiente */}
-        <div className="sticky top-0 z-20 p-4">
-          <div className="relative h-32 rounded-2xl overflow-hidden">
+        {/* Header del menú con gradiente - se mantiene igual */}
+        <div className="sticky top-0 z-20 p-3 sm:p-4">
+          <div className={`relative ${isMobile ? 'h-28' : 'h-32'} rounded-xl sm:rounded-2xl overflow-hidden`}>
             {/* Fondo con gradiente */}
             <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600"></div>
             
             {/* Efectos decorativos */}
             <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
-            <div className="absolute -top-24 -right-24 w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
-            <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-purple-400/20 rounded-full blur-3xl"></div>
+            <div className="absolute -top-24 -right-24 w-32 sm:w-48 h-32 sm:h-48 bg-white/10 rounded-full blur-3xl"></div>
+            <div className="absolute -bottom-24 -left-24 w-32 sm:w-48 h-32 sm:h-48 bg-purple-400/20 rounded-full blur-3xl"></div>
             
             {/* Botón de cerrar */}
             <motion.button
               whileHover={{ scale: 1.1, rotate: 90 }}
               whileTap={{ scale: 0.9 }}
               onClick={onClose}
-              className="absolute top-3 left-3 p-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl transition-all duration-200 border border-white/30 z-30"
+              className="absolute top-2 sm:top-3 left-2 sm:left-3 p-1.5 sm:p-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg sm:rounded-xl transition-all duration-200 border border-white/30 z-30"
               aria-label="Cerrar menú"
             >
-              <X className="w-4 h-4 text-white" />
+              <X className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
             </motion.button>
 
             {/* Contenido del header */}
@@ -455,7 +468,7 @@ const RightMenu: React.FC<RightMenuProps> = ({
                 initial={{ y: -20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.1 }}
-                className="text-2xl font-bold text-white mb-1 drop-shadow-lg"
+                className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold text-white mb-0.5 sm:mb-1 drop-shadow-lg`}
               >
                 Opciones rápidas
               </motion.h2>
@@ -463,37 +476,39 @@ const RightMenu: React.FC<RightMenuProps> = ({
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.2 }}
-                className="px-3 py-1 bg-white/30 backdrop-blur-sm rounded-full border border-white/50"
+                className="px-2 sm:px-3 py-0.5 sm:py-1 bg-white/30 backdrop-blur-sm rounded-full border border-white/50"
               >
-                <span className="text-xs font-semibold text-white">Personaliza tu experiencia</span>
+                <span className={`${isMobile ? 'text-[10px]' : 'text-xs'} font-semibold text-white`}>
+                  Personaliza tu experiencia
+                </span>
               </motion.div>
             </div>
           </div>
         </div>
 
         {/* Contenido del menú */}
-        <div className="px-4 pb-6">
+        <div className="px-3 sm:px-4 pb-4 sm:pb-6">
           {/* Información rápida */}
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="mb-6 p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-xl"
+            className={`mb-4 sm:mb-6 p-3 sm:p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-lg sm:rounded-xl`}
           >
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-green-500/20 rounded-xl">
-                  <Cloud className="w-5 h-5 text-green-500" />
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className={`p-1.5 sm:p-2 bg-green-500/20 rounded-lg sm:rounded-xl`}>
+                  <Cloud className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">Estado</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                  <p className={`${isMobile ? 'text-xs' : 'text-sm'} font-medium text-gray-900 dark:text-white`}>Estado</p>
+                  <p className={`${isMobile ? 'text-[10px]' : 'text-xs'} text-gray-600 dark:text-gray-400`}>
                     {navigator.onLine ? 'Conectado' : 'Sin conexión'}
                   </p>
                 </div>
               </div>
-              <div className="px-2 py-1 bg-blue-500/20 rounded-lg">
-                <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
+              <div className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-blue-500/20 rounded-md sm:rounded-lg">
+                <span className={`${isMobile ? 'text-[10px]' : 'text-xs'} font-medium text-blue-600 dark:text-blue-400`}>
                   {notes.length} notas
                 </span>
               </div>
@@ -507,13 +522,13 @@ const RightMenu: React.FC<RightMenuProps> = ({
                 key={idx}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 * idx }}
-                className="mb-6"
+                transition={{ delay: Math.min(0.1 * idx, 0.5) }}
+                className={`mb-4 sm:mb-6 ${idx === menuSections.length - 1 ? 'mb-0' : ''}`}
               >
                 {/* Título de sección */}
-                <div className="flex items-center gap-2 mb-2 px-2">
-                  <div className="w-1 h-4 bg-gradient-to-b from-blue-400 to-purple-500 rounded-full" />
-                  <span className={`text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2 px-1.5 sm:px-2">
+                  <div className="w-0.5 sm:w-1 h-3 sm:h-4 bg-gradient-to-b from-blue-400 to-purple-500 rounded-full" />
+                  <span className={`text-[10px] sm:text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                     {section.title}
                   </span>
                   {section.icon && (
@@ -524,7 +539,7 @@ const RightMenu: React.FC<RightMenuProps> = ({
                 </div>
 
                 {/* Items de la sección */}
-                <div className="space-y-1">
+                <div className="space-y-0.5 sm:space-y-1">
                   {section.items.map((item, itemIdx) => {
                     const gradient = getItemGradient(item.color);
                     const iconBg = getIconBgColor(item.color);
@@ -539,8 +554,8 @@ const RightMenu: React.FC<RightMenuProps> = ({
                         onHoverEnd={() => setHoveredItem(null)}
                         onClick={item.onClick}
                         className={`
-                          w-full flex items-center gap-3 px-3 py-3 rounded-xl
-                          transition-all duration-200 relative overflow-hidden group
+                          w-full flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2 sm:py-3
+                          rounded-lg sm:rounded-xl transition-all duration-200 relative overflow-hidden group
                           ${isDarkMode 
                             ? 'hover:bg-white/5' 
                             : 'hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50'
@@ -560,23 +575,23 @@ const RightMenu: React.FC<RightMenuProps> = ({
                         
                         {/* Icono con fondo */}
                         <div className={`
-                          relative z-10 p-2 rounded-xl ${iconBg}
+                          relative z-10 p-1.5 sm:p-2 rounded-lg sm:rounded-xl ${iconBg}
                           transition-all duration-200 group-hover:scale-110
                         `}>
-                          <span className={`text-${item.color}-500 dark:text-${item.color}-400`}>
+                          <span className={`text-${item.color}-500 dark:text-${item.color}-400 text-xs sm:text-base`}>
                             {item.icon}
                           </span>
                         </div>
                         
                         {/* Label y descripción */}
                         <div className="flex-1 text-left relative z-10">
-                          <span className={`block text-sm font-medium ${
+                          <span className={`block ${isMobile ? 'text-xs' : 'text-sm'} font-medium ${
                             isDarkMode ? 'text-gray-200' : 'text-gray-700'
                           }`}>
                             {item.label}
                           </span>
                           {item.description && (
-                            <span className={`block text-xs mt-0.5 ${
+                            <span className={`hidden sm:block text-xs mt-0.5 ${
                               isDarkMode ? 'text-gray-500' : 'text-gray-500'
                             }`}>
                               {item.description}
@@ -587,7 +602,7 @@ const RightMenu: React.FC<RightMenuProps> = ({
                         {/* Badge o indicador de estado */}
                         {item.badge && (
                           <span className={`
-                            relative z-10 px-2 py-0.5 rounded-lg text-xs font-medium
+                            relative z-10 px-1.5 sm:px-2 py-0.5 rounded-md sm:rounded-lg text-[10px] sm:text-xs font-medium
                             ${iconBg} text-${item.color}-600 dark:text-${item.color}-400
                           `}>
                             {item.badge}
@@ -597,15 +612,15 @@ const RightMenu: React.FC<RightMenuProps> = ({
                         {/* Indicador de toggle */}
                         {item.action === 'toggle' && (
                           <div className={`
-                            relative z-10 w-8 h-4 rounded-full transition-colors duration-200
+                            relative z-10 w-6 sm:w-8 h-3 sm:h-4 rounded-full transition-colors duration-200
                             ${item.color === 'gray' 
                               ? 'bg-gray-400' 
                               : `bg-${item.color}-500`
                             }
                           `}>
                             <motion.div
-                              className="absolute top-0.5 w-3 h-3 bg-white rounded-full shadow-md"
-                              animate={{ x: item.color === 'gray' ? 4 : 16 }}
+                              className="absolute top-0.5 w-2 sm:w-3 h-2 sm:h-3 bg-white rounded-full shadow-md"
+                              animate={{ x: item.color === 'gray' ? (isMobile ? 3 : 4) : (isMobile ? 12 : 16) }}
                               transition={{ type: "spring", stiffness: 500, damping: 30 }}
                             />
                           </div>
@@ -621,26 +636,26 @@ const RightMenu: React.FC<RightMenuProps> = ({
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
-                    className="overflow-hidden mt-2"
+                    className="overflow-hidden mt-1 sm:mt-2"
                   >
-                    <div className="p-3 bg-gray-50/50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
-                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 px-2">
+                    <div className="p-2 sm:p-3 bg-gray-50/50 dark:bg-gray-800/50 rounded-lg sm:rounded-xl border border-gray-200 dark:border-gray-700">
+                      <p className={`text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 sm:mb-2 px-1 sm:px-2`}>
                         Compartir a través de:
                       </p>
-                      <div className="grid grid-cols-4 gap-2">
-                        {shareItems.map((item, index) => (
+                      <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
+                        {shareItems.slice(0, isMobile ? 4 : 7).map((item, index) => (
                           <motion.button
                             key={index}
-                            whileHover={{ scale: 1.1, y: -2 }}
+                            whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                             onClick={item.onClick}
-                            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex flex-col items-center gap-1"
+                            className="p-1.5 sm:p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex flex-col items-center gap-0.5 sm:gap-1"
                             title={item.label}
                           >
-                            <div className={`p-1.5 rounded-full bg-${item.color}-500/20 text-${item.color}-500`}>
+                            <div className={`p-1 sm:p-1.5 rounded-full bg-${item.color}-500/20 text-${item.color}-500`}>
                               {item.icon}
                             </div>
-                            <span className="text-[10px] text-gray-600 dark:text-gray-400">{item.label}</span>
+                            <span className="text-[8px] sm:text-[10px] text-gray-600 dark:text-gray-400">{item.label}</span>
                           </motion.button>
                         ))}
                       </div>
@@ -656,23 +671,23 @@ const RightMenu: React.FC<RightMenuProps> = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.8 }}
-            className="mt-8 pt-4 border-t border-gray-200 dark:border-gray-700"
+            className="mt-6 sm:mt-8 pt-3 sm:pt-4 border-t border-gray-200 dark:border-gray-700"
           >
-            <p className="text-xs text-center text-gray-500 dark:text-gray-500">
+            <p className="text-[10px] sm:text-xs text-center text-gray-500 dark:text-gray-500">
               QuickNote v2.4.0 · {new Date().toLocaleDateString()}
             </p>
           </motion.div>
         </div>
       </motion.div>
 
-      {/* Modal de confirmación de cierre de sesión */}
+      {/* Modal de confirmación de cierre de sesión responsivo */}
       <AnimatePresence>
         {showLogoutModal && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+            className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4"
           >
             {/* Overlay del modal */}
             <motion.div 
@@ -690,48 +705,45 @@ const RightMenu: React.FC<RightMenuProps> = ({
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
               className={`
-                relative w-full max-w-md rounded-2xl overflow-hidden
-                ${isDarkMode 
-                  ? 'bg-gray-800' 
-                  : 'bg-white'
-                }
+                relative w-full max-w-[320px] sm:max-w-md rounded-xl sm:rounded-2xl overflow-hidden
+                ${isDarkMode ? 'bg-gray-800' : 'bg-white'}
                 border-2 border-white/30 shadow-2xl
               `}
             >
               {/* Header con gradiente */}
-              <div className="bg-gradient-to-r from-red-500 to-red-600 px-6 py-4">
-                <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                  <LogOut className="w-6 h-6" />
+              <div className="bg-gradient-to-r from-red-500 to-red-600 px-4 sm:px-6 py-3 sm:py-4">
+                <h3 className="text-base sm:text-xl font-bold text-white flex items-center gap-2">
+                  <LogOut className="w-4 h-4 sm:w-6 sm:h-6" />
                   Cerrar sesión
                 </h3>
               </div>
 
-              <div className="p-6">
+              <div className="p-4 sm:p-6">
                 {/* Icono de advertencia */}
-                <div className="flex justify-center mb-4">
-                  <div className="p-3 bg-red-500/20 rounded-full">
-                    <LogOut className="w-8 h-8 text-red-500" />
+                <div className="flex justify-center mb-3 sm:mb-4">
+                  <div className="p-2 sm:p-3 bg-red-500/20 rounded-full">
+                    <LogOut className="w-6 h-6 sm:w-8 sm:h-8 text-red-500" />
                   </div>
                 </div>
 
                 {/* Mensaje de confirmación */}
-                <div className="text-center mb-6">
-                  <p className={`text-lg font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                <div className="text-center mb-4 sm:mb-6">
+                  <p className={`text-base sm:text-lg font-semibold mb-1 sm:mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                     ¿Estás seguro de cerrar sesión?
                   </p>
-                  <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  <p className={`text-xs sm:text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                     Podrás volver a iniciar sesión cuando quieras
                   </p>
                 </div>
 
                 {/* Botones de acción */}
-                <div className="flex gap-3">
+                <div className="flex gap-2 sm:gap-3">
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={handleCancelLogout}
                     disabled={isLoggingOut}
-                    className="flex-1 px-4 py-3 bg-gray-500 text-white rounded-xl hover:bg-gray-600 transition-colors disabled:opacity-50 font-medium"
+                    className="flex-1 px-3 sm:px-4 py-2 sm:py-3 bg-gray-500 text-white rounded-lg sm:rounded-xl hover:bg-gray-600 transition-colors disabled:opacity-50 font-medium text-sm sm:text-base"
                   >
                     Cancelar
                   </motion.button>
@@ -740,7 +752,7 @@ const RightMenu: React.FC<RightMenuProps> = ({
                     whileTap={{ scale: 0.98 }}
                     onClick={handleConfirmLogout}
                     disabled={isLoggingOut}
-                    className="flex-1 px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:from-red-600 hover:to-red-700 transition-all disabled:opacity-50 font-medium flex items-center justify-center gap-2"
+                    className="flex-1 px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg sm:rounded-xl hover:from-red-600 hover:to-red-700 transition-all disabled:opacity-50 font-medium text-sm sm:text-base flex items-center justify-center gap-1 sm:gap-2"
                   >
                     {isLoggingOut ? (
                       <>
@@ -749,7 +761,7 @@ const RightMenu: React.FC<RightMenuProps> = ({
                       </>
                     ) : (
                       <>
-                        <LogOut className="w-5 h-5" />
+                        <LogOut className="w-3 h-3 sm:w-5 sm:h-5" />
                         <span>Cerrar sesión</span>
                       </>
                     )}

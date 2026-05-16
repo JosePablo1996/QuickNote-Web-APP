@@ -1,4 +1,4 @@
-// src/contexts/components/notes/NoteForm.tsx
+// src/contexts/components/notes/NoteSimpleForm.tsx
 // ============================================================================
 // FORMULARIO SIMPLIFICADO PARA CREACIÓN/EDICIÓN DE NOTAS
 // ============================================================================
@@ -40,7 +40,8 @@ const SimplePreview: React.FC<{
   color: string;
   tags: string[];
 }> = ({ title, content, color, tags }) => {
-  const safeContent = content || '';
+  const safeTitle = title || 'Título de la nota';
+  const safeContent = content || 'Sin contenido';
   const safeTags = tags || [];
   
   return (
@@ -57,11 +58,11 @@ const SimplePreview: React.FC<{
             <Sparkles className="w-3 h-3" style={{ color }} />
           </div>
           <h3 className="font-semibold text-gray-800 dark:text-gray-200 truncate">
-            {title || 'Título de la nota'}
+            {safeTitle}
           </h3>
         </div>
         <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-3">
-          {safeContent || 'Sin contenido'}
+          {safeContent}
         </p>
         {safeTags.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mt-3">
@@ -132,12 +133,26 @@ const NoteSimpleForm: React.FC<NoteSimpleFormProps> = ({
   isSubmitting,
   isEditing,
 }) => {
-  // Valores seguros con fallbacks
-  const safeTitle = draft.title || '';
-  const safeContent = draft.content || '';
-  const safeColor = draft.color || '#3B82F6';
-  const safeTags: string[] = draft.tags || [];
-  const safeIsFavorite = draft.is_favorite || false;
+  // Asegurar que draft existe (fallback por si acaso)
+  const safeDraft = draft || {
+    title: '',
+    content: '',
+    color: '#3B82F6',
+    shape: 'rounded',
+    icon: 'default',
+    size: 'normal',
+    colorIntensity: 'medium',
+    is_favorite: false,
+    is_archived: false,
+    tags: [],
+  };
+
+  // Valores seguros
+  const safeTitle = safeDraft.title || '';
+  const safeContent = safeDraft.content || '';
+  const safeColor = safeDraft.color || '#3B82F6';
+  const safeTags: string[] = safeDraft.tags || [];
+  const safeIsFavorite = safeDraft.is_favorite || false;
 
   const [errors, setErrors] = useState<{ title?: string; content?: string }>({});
   const [showPreview, setShowPreview] = useState(false);
@@ -184,7 +199,7 @@ const NoteSimpleForm: React.FC<NoteSimpleFormProps> = ({
     if (!validateForm()) return;
     
     const dataToSubmit: NoteCreate = {
-      ...draft,
+      ...safeDraft,
       title: safeTitle,
       content: safeContent,
       color: safeColor,
@@ -201,7 +216,7 @@ const NoteSimpleForm: React.FC<NoteSimpleFormProps> = ({
     if (safeTags.includes(tag)) { setTagError('Ya existe'); return; }
     if (safeTags.length >= 10) { setTagError('Máximo 10 etiquetas'); return; }
     
-    setDraft({ ...draft, tags: [...safeTags, tag] });
+    setDraft({ ...safeDraft, tags: [...safeTags, tag] });
     setNewTag('');
     setTagError(null);
     
@@ -212,7 +227,7 @@ const NoteSimpleForm: React.FC<NoteSimpleFormProps> = ({
   };
 
   const handleRemoveTag = (tagToRemove: string) => {
-    setDraft({ ...draft, tags: safeTags.filter(t => t !== tagToRemove) });
+    setDraft({ ...safeDraft, tags: safeTags.filter(t => t !== tagToRemove) });
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -224,20 +239,20 @@ const NoteSimpleForm: React.FC<NoteSimpleFormProps> = ({
 
   const handleAddRecentTag = (tag: string) => {
     if (!safeTags.includes(tag) && safeTags.length < 10) {
-      setDraft({ ...draft, tags: [...safeTags, tag] });
+      setDraft({ ...safeDraft, tags: [...safeTags, tag] });
     }
   };
 
   const toggleFavorite = () => {
-    setDraft({ ...draft, is_favorite: !safeIsFavorite });
+    setDraft({ ...safeDraft, is_favorite: !safeIsFavorite });
   };
 
   const updateTitle = (value: string) => {
-    setDraft({ ...draft, title: value });
+    setDraft({ ...safeDraft, title: value });
   };
 
   const updateContent = (value: string) => {
-    setDraft({ ...draft, content: value });
+    setDraft({ ...safeDraft, content: value });
   };
 
   return (
