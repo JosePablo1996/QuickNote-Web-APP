@@ -54,6 +54,48 @@ class BackupCloudService {
   }
 
   /**
+   * ✅ Función auxiliar para extraer notas de diferentes estructuras
+   */
+  private extractNotesFromData(data: any): Note[] {
+    // Caso 1: data.notes es un array
+    if (data && data.notes && Array.isArray(data.notes)) {
+      console.log('📦 [backupCloudService] Estructura detectada: data.notes');
+      return data.notes;
+    }
+    
+    // Caso 2: data es directamente un array
+    if (data && Array.isArray(data)) {
+      console.log('📦 [backupCloudService] Estructura detectada: array directo');
+      return data;
+    }
+    
+    // Caso 3: data.data.notes (estructura anidada)
+    if (data && data.data && data.data.notes && Array.isArray(data.data.notes)) {
+      console.log('📦 [backupCloudService] Estructura detectada: data.data.notes');
+      return data.data.notes;
+    }
+    
+    // Caso 4: data.notes_data (estructura de backup)
+    if (data && data.notes_data && data.notes_data.notes && Array.isArray(data.notes_data.notes)) {
+      console.log('📦 [backupCloudService] Estructura detectada: data.notes_data.notes');
+      return data.notes_data.notes;
+    }
+    
+    // Caso 5: Intentar buscar cualquier propiedad que sea un array de notas
+    if (data && typeof data === 'object') {
+      for (const key of Object.keys(data)) {
+        if (data[key] && Array.isArray(data[key]) && data[key].length > 0 && data[key][0]?.title !== undefined) {
+          console.log(`📦 [backupCloudService] Estructura detectada: data.${key} (array de notas)`);
+          return data[key];
+        }
+      }
+    }
+    
+    console.warn('⚠️ [backupCloudService] No se pudo extraer notas de la estructura:', data);
+    return [];
+  }
+
+  /**
    * Guardar backup en Supabase
    */
   async saveBackupToCloud(notes: Note[]): Promise<CloudBackupMetadata | null> {
@@ -216,6 +258,16 @@ class BackupCloudService {
       const backup = await response.json();
       console.log(`✅ Backup encontrado: ${backup.file_name}`);
       
+      // Asegurar que notes_data sea un objeto válido
+      let notesData = backup.notes_data;
+      if (typeof notesData === 'string') {
+        try {
+          notesData = JSON.parse(notesData);
+        } catch (e) {
+          console.error('Error parsing notes_data:', e);
+        }
+      }
+      
       return {
         id: backup.id,
         user_id: backup.user_id,
@@ -226,7 +278,7 @@ class BackupCloudService {
         is_accumulative: backup.is_accumulative,
         created_at: backup.created_at,
         updated_at: backup.updated_at,
-        notes_data: backup.notes_data as BackupData,
+        notes_data: notesData as BackupData,
       };
     } catch (error) {
       console.error('❌ Error en getCloudBackup:', error);
@@ -236,6 +288,7 @@ class BackupCloudService {
 
   /**
    * Restaurar backup desde Supabase
+   * ✅ MEJORADO: Maneja diferentes estructuras de datos
    */
   async restoreCloudBackup(backupId: string): Promise<Note[]> {
     const cloudBackup = await this.getCloudBackup(backupId);
@@ -245,19 +298,21 @@ class BackupCloudService {
       throw new Error('Backup no encontrado en la nube');
     }
 
-    const data = cloudBackup.notes_data;
+    // Extraer notas de la estructura de datos
+    const notes = this.extractNotesFromData(cloudBackup.notes_data);
     
-    if (!data.notes || !Array.isArray(data.notes)) {
-      throw new Error('Formato de backup inválido');
+    if (!notes || notes.length === 0) {
+      console.error('❌ No se encontraron notas en el backup');
+      console.log('📦 Estructura del backup:', cloudBackup.notes_data);
+      throw new Error('No hay notas en el backup');
     }
 
-    console.log(`✅ ${data.notes.length} notas recuperadas de la nube`);
-    return data.notes;
+    console.log(`✅ ${notes.length} notas recuperadas de la nube`);
+    return notes;
   }
 
   /**
    * Eliminar backup de Supabase
-   * ✅ MEJORADO: Maneja errores 404 y considera éxito si el backup no existe
    */
   async deleteCloudBackup(backupId: string): Promise<boolean> {
     const token = this.getAuthToken();
@@ -282,7 +337,6 @@ class BackupCloudService {
         }
       });
 
-      // ✅ 404 significa que el backup ya no existe - consideramos éxito
       if (response.status === 404) {
         console.log(`⚠️ Backup ${backupId} no existe en la nube (ya fue eliminado)`);
         return true;
@@ -299,8 +353,6 @@ class BackupCloudService {
       return true;
     } catch (error) {
       console.error('❌ Error en deleteCloudBackup:', error);
-      // ✅ En caso de error de red, consideramos que el backup puede estar eliminado
-      // para evitar backups huérfanos en el frontend
       console.warn(`⚠️ Error de red al eliminar backup ${backupId}, considerando como eliminado`);
       return true;
     }

@@ -37,8 +37,48 @@ const backupService = {
   deleteCloudBackup: (backupId: string) => api.deleteCloudBackup(backupId),
 };
 
-// ✅ Constante para el límite máximo de backups - ACTUALIZADO a 20
+// Constante para el límite máximo de backups
 const MAX_BACKUPS = 20;
+
+// ✅ Función para extraer notas de diferentes estructuras de datos
+const extractNotesFromBackupData = (data: any): any[] => {
+  // Caso 1: data.notes es un array
+  if (data && data.notes && Array.isArray(data.notes)) {
+    console.log('📦 Estructura detectada: data.notes');
+    return data.notes;
+  }
+  
+  // Caso 2: data es directamente un array
+  if (data && Array.isArray(data)) {
+    console.log('📦 Estructura detectada: array directo');
+    return data;
+  }
+  
+  // Caso 3: data.data.notes (estructura anidada)
+  if (data && data.data && data.data.notes && Array.isArray(data.data.notes)) {
+    console.log('📦 Estructura detectada: data.data.notes');
+    return data.data.notes;
+  }
+  
+  // Caso 4: data.notes_data (estructura de backup)
+  if (data && data.notes_data && data.notes_data.notes && Array.isArray(data.notes_data.notes)) {
+    console.log('📦 Estructura detectada: data.notes_data.notes');
+    return data.notes_data.notes;
+  }
+  
+  // Caso 5: Intentar buscar cualquier propiedad que sea un array de notas
+  if (data && typeof data === 'object') {
+    for (const key of Object.keys(data)) {
+      if (data[key] && Array.isArray(data[key]) && data[key].length > 0 && data[key][0]?.title !== undefined) {
+        console.log(`📦 Estructura detectada: data.${key} (array de notas)`);
+        return data[key];
+      }
+    }
+  }
+  
+  console.warn('⚠️ No se pudo extraer notas de la estructura:', data);
+  return [];
+};
 
 // ✅ Función para mapear datos del backup al modelo Note completo (PRESERVANDO PERSONALIZACIÓN)
 const mapToNoteModel = (backupNote: any): Note => {
@@ -147,7 +187,7 @@ const CloudBackupSection: React.FC = () => {
     }
   };
 
-  // ✅ MODIFICADO: Restauración con preservación de personalización
+  // ✅ MODIFICADO: Restauración con manejo de diferentes estructuras de datos
   const handleRestoreCloud = async (backupId: string) => {
     const backup = cloudBackups.find(b => b.id === backupId);
     if (!backup) return;
@@ -168,13 +208,17 @@ const CloudBackupSection: React.FC = () => {
     }, 200);
 
     try {
-      const restoredNotes = await backupService.restoreCloudBackup(backupId);
+      const restoredData = await backupService.restoreCloudBackup(backupId);
       
       clearInterval(interval);
       setCloudProgress(100);
       
-      if (restoredNotes && Array.isArray(restoredNotes) && restoredNotes.length > 0) {
-        const notesToRestore: Note[] = restoredNotes.map(mapToNoteModel);
+      // ✅ Extraer notas de la estructura de datos recibida
+      let restoredNotesArray = extractNotesFromBackupData(restoredData);
+      
+      if (restoredNotesArray && restoredNotesArray.length > 0) {
+        // Mapear cada nota preservando todos los campos de personalización
+        const notesToRestore: Note[] = restoredNotesArray.map(mapToNoteModel);
         
         console.log('📝 Notas restauradas con personalización:', notesToRestore.map(n => ({
           title: n.title,
@@ -186,7 +230,7 @@ const CloudBackupSection: React.FC = () => {
         
         setTimeout(() => {
           setShowCloudProgress(false);
-          setCloudSuccessMessage(`✅ ${notesToRestore.length} notas restauradas desde la nube (con personalización)`);
+          setCloudSuccessMessage(`✅ ${notesToRestore.length} notas restauradas desde la nube`);
           setShowCloudSuccess(true);
         }, 500);
         
@@ -196,6 +240,7 @@ const CloudBackupSection: React.FC = () => {
         
         success(`✅ ${notesToRestore.length} notas restauradas desde la nube`);
       } else {
+        console.error('No se pudieron extraer notas del backup:', restoredData);
         setTimeout(() => {
           setShowCloudProgress(false);
           setCloudSuccessMessage(`⚠️ No se encontraron notas en el backup`);
@@ -208,6 +253,7 @@ const CloudBackupSection: React.FC = () => {
     } catch (error: any) {
       clearInterval(interval);
       setShowCloudProgress(false);
+      console.error('Error restaurando backup:', error);
       showError(error.message || 'Error al restaurar desde la nube');
     } finally {
       setIsRestoringCloud(null);
