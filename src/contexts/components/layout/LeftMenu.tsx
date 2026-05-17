@@ -281,7 +281,7 @@ const LeftMenu: React.FC<LeftMenuProps> = ({ isOpen, onClose, onNavigate }) => {
       hidden: isMobile,
       items: [
         {
-          label: 'Respaldo manual',
+          label: 'Copias de seguridad',
           icon: <Download className="w-4 h-4 sm:w-5 sm:h-5" />,
           path: '/backup',
           color: 'blue',

@@ -37,8 +37,8 @@ const backupService = {
   deleteCloudBackup: (backupId: string) => api.deleteCloudBackup(backupId),
 };
 
-// Constante para el límite máximo de backups
-const MAX_BACKUPS = 10;
+// ✅ Constante para el límite máximo de backups - ACTUALIZADO a 20
+const MAX_BACKUPS = 20;
 
 // ✅ Función para mapear datos del backup al modelo Note completo (PRESERVANDO PERSONALIZACIÓN)
 const mapToNoteModel = (backupNote: any): Note => {
@@ -47,7 +47,6 @@ const mapToNoteModel = (backupNote: any): Note => {
     title: backupNote.title || 'Nota sin título',
     content: backupNote.content || '',
     color: backupNote.color || DEFAULT_COLOR,
-    // ✅ PRESERVAR personalización
     shape: backupNote.shape || DEFAULT_SHAPE,
     icon: backupNote.icon || DEFAULT_ICON,
     size: backupNote.size || DEFAULT_SIZE,
@@ -175,10 +174,8 @@ const CloudBackupSection: React.FC = () => {
       setCloudProgress(100);
       
       if (restoredNotes && Array.isArray(restoredNotes) && restoredNotes.length > 0) {
-        // ✅ MAPEAR cada nota preservando todos los campos de personalización
         const notesToRestore: Note[] = restoredNotes.map(mapToNoteModel);
         
-        // Log para verificar que los campos se están preservando
         console.log('📝 Notas restauradas con personalización:', notesToRestore.map(n => ({
           title: n.title,
           shape: n.shape,

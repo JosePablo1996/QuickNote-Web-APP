@@ -52,7 +52,7 @@ export interface BackupLimitInfo {
 const BACKUP_DATA_PREFIX = 'quicknote_backup_data_';
 const BACKUP_METADATA_KEY = 'quicknote_backups_metadata';
 const SYNCED_BACKUPS_KEY = 'quicknote_synced_backup_ids';
-const MAX_BACKUPS_LIMIT = 10;
+const MAX_BACKUPS_LIMIT = 20;
 
 class BackupService {
   private backups: BackupMetadata[] = [];
@@ -137,7 +137,7 @@ class BackupService {
       const backup = this.backups.find(b => b.id === backupId);
       if (backup) {
         backup.cloud_id = cloudId;
-        backup.source = 'cloud';
+        backup.source = 'local'; // Sigue siendo local, pero tiene referencia a la nube
         this.saveToStorage();
       }
     } catch (error) {
@@ -193,6 +193,7 @@ class BackupService {
 
   /**
    * Obtener todos los backups (fusionando locales + nube)
+   * Para el resumen general, mostramos fusionados
    */
   async getBackups(): Promise<BackupMetadata[]> {
     // Obtener backups locales
@@ -234,8 +235,16 @@ class BackupService {
       }
     }
     
-    // Ordenar por fecha (más reciente primero)
     return allBackups.sort((a, b) => 
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+  }
+
+  /**
+   * Obtener SOLO backups locales (para la sección de respaldos locales)
+   */
+  getLocalBackups(): BackupMetadata[] {
+    return this.backups.filter(b => b.source === 'local' || !b.source).sort((a, b) => 
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
   }
@@ -244,11 +253,11 @@ class BackupService {
    * Obtener información del límite de backups
    */
   async getBackupLimitInfo(): Promise<BackupLimitInfo> {
-    const backups = await this.getBackups();
-    const current = backups.length;
+    const localBackups = this.getLocalBackups();
+    const current = localBackups.length;
     const max = MAX_BACKUPS_LIMIT;
     const remaining = max - current;
-    const totalSize = backups.reduce((sum, b) => sum + b.file_size, 0);
+    const totalSize = localBackups.reduce((sum, b) => sum + b.file_size, 0);
     
     return {
       current,
@@ -261,8 +270,7 @@ class BackupService {
   }
 
   /**
-   * Verificar si se puede crear un nuevo backup
-   * @returns { canCreate: boolean, limitInfo: BackupLimitInfo, message?: string }
+   * Verificar si se puede crear un nuevo backup local
    */
   async canCreateBackup(): Promise<{ canCreate: boolean; limitInfo: BackupLimitInfo; message?: string }> {
     const limitInfo = await this.getBackupLimitInfo();
@@ -271,7 +279,7 @@ class BackupService {
       return {
         canCreate: false,
         limitInfo,
-        message: `Has alcanzado el límite de ${limitInfo.max} backups. Elimina algunos para continuar.`
+        message: `Has alcanzado el límite de ${limitInfo.max} backups locales. Elimina algunos para continuar.`
       };
     }
     
@@ -279,7 +287,7 @@ class BackupService {
       return {
         canCreate: true,
         limitInfo,
-        message: `Te quedan solo ${limitInfo.remaining} espacios de ${limitInfo.max} para backups.`
+        message: `Te quedan solo ${limitInfo.remaining} espacios de ${limitInfo.max} para backups locales.`
       };
     }
     
@@ -291,21 +299,19 @@ class BackupService {
 
   /**
    * Eliminar los backups más antiguos (para liberar espacio)
-   * @param keepCount - Número de backups a mantener (los más recientes)
    */
   async deleteOldestBackups(keepCount: number = 5): Promise<{ deleted: number; failed: number }> {
-    const backups = await this.getBackups();
+    const localBackups = this.getLocalBackups();
     
-    if (backups.length <= keepCount) {
+    if (localBackups.length <= keepCount) {
       return { deleted: 0, failed: 0 };
     }
     
-    // Ordenar por fecha (más antiguos primero)
-    const oldestFirst = [...backups].sort((a, b) => 
+    const oldestFirst = [...localBackups].sort((a, b) => 
       new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
     );
     
-    const toDelete = oldestFirst.slice(0, backups.length - keepCount);
+    const toDelete = oldestFirst.slice(0, localBackups.length - keepCount);
     let deleted = 0;
     let failed = 0;
     
@@ -488,11 +494,13 @@ class BackupService {
   }
 
   /**
-   * Crear un nuevo backup (local + nube si hay usuario)
-   * ✅ Ahora verifica el límite antes de crear
+   * Crear un nuevo backup LOCAL (sin sincronizar con la nube automáticamente)
+   * @param notes - Notas a respaldar
+   * @param isAccumulative - Si es acumulativo
+   * @param syncToCloud - Si debe sincronizar con la nube (default: false)
    */
-  async createBackup(notes: Note[], isAccumulative: boolean = true): Promise<BackupMetadata> {
-    // ✅ Verificar límite antes de crear
+  async createBackup(notes: Note[], isAccumulative: boolean = true, syncToCloud: boolean = false): Promise<BackupMetadata> {
+    // Verificar límite antes de crear
     const { canCreate, limitInfo, message } = await this.canCreateBackup();
     
     if (!canCreate) {
@@ -529,6 +537,7 @@ class BackupService {
       source: 'local',
     };
 
+    // Actualizar el flag is_latest de otros backups locales
     const updatedBackups = this.backups.map(b => ({
       ...b,
       is_latest: false
@@ -537,24 +546,30 @@ class BackupService {
     updatedBackups.unshift(backup);
     this.backups = updatedBackups;
     
+    // Guardar los datos completos del backup
     this.saveBackupData(backup.id, backupData);
     this.saveToStorage();
     this.notifyListeners();
 
+    // Descargar el archivo local
     this.downloadBackup(fileName, jsonContent);
 
-    try {
-      const token = localStorage.getItem('auth_token');
-      if (token) {
-        console.log('☁️ Usuario autenticado, sincronizando backup con la nube...');
-        const cloudBackup = await backupCloudService.saveBackupToCloud(notes);
-        if (cloudBackup && cloudBackup.id) {
-          this.markAsSynced(backup.id, cloudBackup.id);
-          console.log(`✅ Backup sincronizado con la nube (ID: ${cloudBackup.id})`);
+    // ✅ SOLO sincronizar con la nube si syncToCloud es explícitamente true
+    // Por defecto, los backups locales NO se suben a la nube
+    if (syncToCloud) {
+      try {
+        const token = localStorage.getItem('auth_token');
+        if (token) {
+          console.log('☁️ Sincronizando backup con la nube (solicitado explícitamente)...');
+          const cloudBackup = await backupCloudService.saveBackupToCloud(notes);
+          if (cloudBackup && cloudBackup.id) {
+            this.markAsSynced(backup.id, cloudBackup.id);
+            console.log(`✅ Backup sincronizado con la nube (ID: ${cloudBackup.id})`);
+          }
         }
+      } catch (error) {
+        console.warn('⚠️ No se pudo sincronizar el backup con la nube:', error);
       }
-    } catch (error) {
-      console.warn('⚠️ No se pudo sincronizar el backup con la nube:', error);
     }
 
     return backup;
@@ -564,6 +579,7 @@ class BackupService {
    * Restaurar un backup desde el historial (local o nube)
    */
   async restoreBackup(backupId: string): Promise<Note[]> {
+    // Verificar si es un backup de la nube
     if (backupId.startsWith('cloud_')) {
       const cloudId = backupId.replace('cloud_', '');
       const cloudBackup = await this.getCloudBackupWithData(cloudId);
@@ -573,6 +589,7 @@ class BackupService {
       return cloudBackup.data.notes;
     }
     
+    // Backup local
     const backupWithData = this.getBackupWithData(backupId);
     if (!backupWithData) {
       throw new Error('Backup no encontrado o datos corruptos');
@@ -633,6 +650,7 @@ class BackupService {
    * Descargar un backup del historial
    */
   async downloadBackupFromHistory(backupId: string): Promise<void> {
+    // Verificar si es backup de nube
     if (backupId.startsWith('cloud_')) {
       const cloudId = backupId.replace('cloud_', '');
       const cloudBackup = await this.getCloudBackupWithData(cloudId);
@@ -644,6 +662,7 @@ class BackupService {
       return;
     }
     
+    // Backup local
     const backupWithData = this.getBackupWithData(backupId);
     if (!backupWithData) {
       throw new Error('Backup no encontrado');
@@ -654,32 +673,51 @@ class BackupService {
   }
 
   /**
-   * Eliminar un backup
+   * Eliminar un backup (local o de nube)
    */
   async deleteBackup(backupId: string): Promise<void> {
+    // Verificar si es backup de nube
     if (backupId.startsWith('cloud_')) {
       const cloudId = backupId.replace('cloud_', '');
       try {
-        await backupCloudService.deleteCloudBackup(cloudId);
-        console.log(`✅ Backup en la nube ${cloudId} eliminado`);
+        const result = await backupCloudService.deleteCloudBackup(cloudId);
+        if (result) {
+          // También eliminar de la lista local si existe
+          this.backups = this.backups.filter(b => b.id !== backupId);
+          this.deleteBackupData(backupId);
+          this.saveToStorage();
+          console.log(`✅ Backup en la nube ${cloudId} eliminado y removido del historial local`);
+        }
       } catch (error) {
         console.error('Error deleting cloud backup:', error);
       }
       return;
     }
     
+    // Backup local - Limpiar completamente
+    console.log(`🗑️ Eliminando backup local: ${backupId}`);
+    
+    // 1. Eliminar de la lista de backups
     this.backups = this.backups.filter(b => b.id !== backupId);
+    
+    // 2. Eliminar los datos del backup del localStorage
     this.deleteBackupData(backupId);
+    
+    // 3. Guardar la lista actualizada
     this.saveToStorage();
+    
+    // 4. Notificar a los suscriptores
     this.notifyListeners();
+    
+    console.log(`✅ Backup local ${backupId} eliminado correctamente`);
   }
 
   /**
    * Obtener estadísticas de backups
    */
   async getBackupStats(currentNotes: Note[]): Promise<BackupStats> {
-    const sortedBackups = this.getBackupsSync();
-    const lastBackup = sortedBackups.length > 0 ? sortedBackups[0] : null;
+    const localBackups = this.getLocalBackups();
+    const lastBackup = localBackups.length > 0 ? localBackups[0] : null;
     
     let notesSinceLastBackup = 0;
     if (lastBackup) {
