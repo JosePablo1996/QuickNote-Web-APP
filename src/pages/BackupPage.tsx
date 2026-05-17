@@ -243,7 +243,7 @@ const BackupPage: React.FC = () => {
             </div>
             <div className="absolute top-2 right-3">
               <span className="inline-flex items-center px-2 py-1 bg-white/20 backdrop-blur-sm rounded-full text-white text-[10px] font-medium border border-white/30">
-                v 2.4.0
+                v 2.6.0
               </span>
             </div>
           </div>

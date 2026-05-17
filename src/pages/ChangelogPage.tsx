@@ -28,7 +28,7 @@ interface VersionData {
 const ChangelogPage: React.FC = () => {
   const navigate = useNavigate();
   const { isDarkMode } = useTheme();
-  const [expandedVersions, setExpandedVersions] = useState<Set<string>>(new Set(['2.5.0']));
+  const [expandedVersions, setExpandedVersions] = useState<Set<string>>(new Set(['2.6.0']));
   const contentRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   // Función para toggle de versión SOLO con clic
@@ -47,14 +47,186 @@ const ChangelogPage: React.FC = () => {
     });
   };
 
-  // Versiones de la aplicación web (desde 1.0.0 hasta 2.5.0)
+  // Versiones de la aplicación web (desde 1.0.0 hasta 2.6.0)
   const versions: VersionData[] = [
+    {
+      version: '2.6.0',
+      date: '16 May 2026',
+      title: '💾 Sistema Completo de Copias de Seguridad (Fases 1-5)',
+      gradientColors: ['#10B981', '#059669'],
+      isLatest: true,
+      changes: [
+        {
+          title: '💾 Backups Locales Completos',
+          icon: (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+            </svg>
+          ),
+          color: '#10B981',
+          items: [
+            {
+              description: '📁 Gestión completa de backups locales',
+              subItems: [
+                'Crear, restaurar, eliminar y descargar backups',
+                'Selección múltiple para eliminación masiva',
+                'Límite aumentado de 10 a 20 backups por usuario',
+                'Indicador visual X/20 backups usados',
+                'Alertas cuando quedan pocos espacios disponibles',
+              ],
+            },
+            {
+              description: '🔄 Sincronización selectiva',
+              subItems: [
+                'Nuevo parámetro syncToCloud: false por defecto',
+                'Backups locales no se suben automáticamente a la nube',
+                'Sincronización manual usando token JWT',
+                'Endpoint /cloud/sync para sincronización bidireccional',
+              ],
+            },
+          ],
+        },
+        {
+          title: '☁️ Backups en la Nube Mejorados',
+          icon: (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+            </svg>
+          ),
+          color: '#3B82F6',
+          items: [
+            {
+              description: '📤 Funcionalidades cloud mejoradas',
+              subItems: [
+                'Límite ampliado a 20 backups en la nube',
+                'extractNotesFromData() soporta 5 formatos diferentes',
+                'Manejo de error 404 como éxito al eliminar',
+                'Preservación de shape, icon, size, colorIntensity al restaurar',
+              ],
+            },
+            {
+              description: '📊 Tarjetas de estadísticas',
+              subItems: [
+                'Sincronización automática cada 30 segundos',
+                'Alertas visuales para límite bajo/alcanzado',
+                'Información del backup más reciente en la nube',
+              ],
+            },
+          ],
+        },
+        {
+          title: '🤖 Auto-Backup Inteligente',
+          icon: (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          ),
+          color: '#F59E0B',
+          items: [
+            {
+              description: '⏱️ Detección automática de cambios',
+              subItems: [
+                'Hash de notas para detectar cambios reales',
+                'Debounce inteligente de 30 segundos',
+                'Backup automático cuando hay cambios pendientes',
+                'Función forceBackup() para backup manual forzado',
+              ],
+            },
+            {
+              description: '📱 Indicador visual AutoBackupIndicator',
+              subItems: [
+                'Posiciones configurables: top-right, top-left, bottom-right, bottom-left, inline',
+                'Estados visuales: "Cambios pendientes", "Guardando...", "Backup en la nube"',
+                'Barra de progreso con animación durante el backup',
+                'Botón de acción "Guardar" para backup manual',
+              ],
+            },
+          ],
+        },
+        {
+          title: '🖥️ Nuevos Componentes de Backup',
+          icon: (
+            <svg className="w-5 h-5"fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          ),
+          color: '#8B5CF6',
+          items: [
+            {
+              description: '🧩 Componentes creados',
+              subItems: [
+                'BackupLocalSection.tsx - Gestión de backups locales',
+                'CloudBackupSection.tsx - Gestión de backups en nube',
+                'BackupStatsCards.tsx - Estadísticas y alertas',
+                'BackupSelectionBar.tsx - Barra de selección múltiple',
+                'BackupLimitModal.tsx - Modal de límite alcanzado',
+                'BackupDeleteConfirmModal.tsx - Confirmación de eliminación',
+                'BackupModals.tsx - Unificación de modales',
+              ],
+            },
+          ],
+        },
+        {
+          title: '📄 Página de Ayuda Rediseñada',
+          icon: (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          ),
+          color: '#EC4899',
+          items: [
+            {
+              description: '🎨 Nuevo diseño y funcionalidades',
+              subItems: [
+                'Banner decorativo con gradiente',
+                'Sistema de tabs: FAQ, Contacto, Acerca de',
+                '8 categorías de FAQ con colores distintos',
+                'Buscador para filtrar por pregunta/respuesta',
+                'Grid de 6 características principales',
+                'Guías rápidas en modales con pasos y consejos',
+                'Información de versión v2.6.0 con detalles técnicos',
+              ],
+            },
+          ],
+        },
+        {
+          title: '🐛 Correcciones de Errores v2.6.0',
+          icon: (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            </svg>
+          ),
+          color: '#EF4444',
+          items: [
+            {
+              description: '🔧 Backend',
+              subItems: [
+                'Solución error Illegal header value b"Bearer "',
+                'Límite aumentado de 10 a 20 backups en enforce_backup_limit',
+                'Endpoint DELETE retorna 200 OK con already_deleted: true',
+                'Mejor manejo de errores en autenticación',
+              ],
+            },
+            {
+              description: '🔧 Frontend',
+              subItems: [
+                'Solución error usuario no autenticado al sincronizar',
+                'Uso de localStorage.getItem("auth_token") en lugar de supabase.auth',
+                'Función extractNotesFromData() que maneja 5 formatos diferentes',
+                'Eliminado isDarkMode is not defined en TabButton',
+                'Eliminado widget duplicado en esquina inferior',
+                'Limpieza completa de backups huérfanos en localStorage',
+              ],
+            },
+          ],
+        },
+      ],
+    },
     {
       version: '2.5.0',
       date: '15 May 2026',
       title: '🔐 Seguridad Avanzada, 2FA Completo y Recuperación por OTP',
       gradientColors: ['#8B5CF6', '#EC4899'],
-      isLatest: true,
       changes: [
         {
           title: '🔐 Seguridad Avanzada de Contraseñas',
@@ -794,11 +966,11 @@ const ChangelogPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Lista de versiones - Responsive */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-5">
+      {/* Lista de versiones - Responsive con mejor legibilidad móvil */}
+      <div className="max-w-5xl mx-auto px-3 sm:px-6 py-3 sm:py-6 space-y-3 sm:space-y-5">
         {versions.map((version, index) => {
           const isExpanded = expandedVersions.has(version.version);
-          const isLatest = version.isLatest || (index === 0 && version.version === '2.5.0');
+          const isLatest = version.isLatest;
           const gradientStart = version.gradientColors[0];
           const gradientEnd = version.gradientColors[1];
 
@@ -834,17 +1006,26 @@ const ChangelogPage: React.FC = () => {
                 </>
               )}
 
-              {/* Header de la versión */}
+              {/* Header de la versión - Mejorado para móvil */}
               <div
-                className="relative p-4 sm:p-6 cursor-pointer select-none"
+                className="relative p-3 sm:p-6 cursor-pointer select-none"
                 onClick={() => toggleVersion(version.version)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    toggleVersion(version.version);
+                  }
+                }}
+                aria-label={`Versión ${version.version} - ${isExpanded ? 'expandida' : 'colapsada'}. ${version.title}`}
               >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-3">
                     {/* Badge de versión */}
                     <div
                       className={`
-                        px-3 sm:px-5 py-1.5 sm:py-2.5 rounded-full text-white font-bold text-xs sm:text-sm
+                        px-2.5 sm:px-5 py-1 sm:py-2.5 rounded-full text-white font-bold text-[11px] sm:text-sm
                         transition-all duration-500
                         ${isExpanded ? 'scale-110 shadow-2xl' : 'shadow-lg hover:shadow-xl'}
                         relative overflow-hidden group
@@ -859,29 +1040,29 @@ const ChangelogPage: React.FC = () => {
                       )}
                     </div>
 
-                    {/* Fecha */}
-                    <div className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-200/50 dark:bg-gray-700/50 backdrop-blur-sm rounded-full border border-gray-300/30 dark:border-gray-600/30">
-                      <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    {/* Fecha - Más compacta en móvil */}
+                    <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1 sm:py-2 bg-gray-200/50 dark:bg-gray-700/50 backdrop-blur-sm rounded-full border border-gray-300/30 dark:border-gray-600/30">
+                      <svg className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
-                      <span className="text-[11px] sm:text-xs font-medium text-gray-700 dark:text-gray-300">
+                      <span className="text-[10px] sm:text-xs font-medium text-gray-700 dark:text-gray-300">
                         {version.date}
                       </span>
                     </div>
 
-                    {/* Badge "Latest" */}
+                    {/* Badge "Latest" - Más pequeño en móvil */}
                     {isLatest && (
-                      <div className="px-2 sm:px-3 py-1 sm:py-1.5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full text-white text-[10px] sm:text-xs font-bold shadow-lg animate-pulse">
+                      <div className="px-1.5 sm:px-3 py-0.5 sm:py-1.5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full text-white text-[9px] sm:text-xs font-bold shadow-lg animate-pulse whitespace-nowrap">
                         ✨ Última versión
                       </div>
                     )}
                   </div>
 
-                  {/* Botón expandir/colapsar */}
+                  {/* Botón expandir/colapsar - Más pequeño en móvil */}
                   <button
                     onClick={(e) => toggleVersion(version.version, e)}
                     className={`
-                      p-2 sm:p-3 rounded-full transition-all duration-500 cursor-pointer
+                      p-1.5 sm:p-3 rounded-full transition-all duration-500 cursor-pointer
                       hover:scale-110 active:scale-95 self-start sm:self-auto
                       ${isExpanded 
                         ? `bg-gradient-to-r from-${gradientStart}/20 to-${gradientEnd}/20 shadow-lg` 
@@ -892,7 +1073,7 @@ const ChangelogPage: React.FC = () => {
                     title={isExpanded ? "Colapsar" : "Expandir"}
                   >
                     <svg
-                      className={`w-4 h-4 sm:w-5 sm:h-5 transition-all duration-500 ${isExpanded ? 'rotate-180' : 'rotate-0'}`}
+                      className={`w-3.5 h-3.5 sm:w-5 sm:h-5 transition-all duration-500 ${isExpanded ? 'rotate-180' : 'rotate-0'}`}
                       style={{ color: isExpanded ? gradientStart : undefined }}
                       fill="none"
                       stroke="currentColor"
@@ -903,29 +1084,29 @@ const ChangelogPage: React.FC = () => {
                   </button>
                 </div>
 
-                {/* Título de la versión */}
+                {/* Título de la versión - Visible solo cuando expandido */}
                 <div
                   className={`
                     overflow-hidden transition-all duration-500 ease-in-out
-                    ${isExpanded ? 'max-h-32 opacity-100 mt-3 sm:mt-4' : 'max-h-0 opacity-0'}
+                    ${isExpanded ? 'max-h-32 opacity-100 mt-2 sm:mt-4' : 'max-h-0 opacity-0'}
                   `}
                 >
                   <div
-                    className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-1.5 sm:py-2.5 rounded-xl"
+                    className="inline-flex items-center gap-1.5 sm:gap-2 px-2 sm:px-5 py-1 sm:py-2.5 rounded-lg sm:rounded-xl"
                     style={{
                       backgroundColor: `${gradientStart}15`,
                       border: `1px solid ${gradientStart}25`,
                       backdropFilter: 'blur(8px)',
                     }}
                   >
-                    <span className="text-xs sm:text-sm font-medium" style={{ color: gradientStart }}>
+                    <span className="text-[10px] sm:text-sm font-medium break-words" style={{ color: gradientStart }}>
                       {version.title}
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Contenido expandible */}
+              {/* Contenido expandible - Scroll mejorado para móvil */}
               <div
                 ref={(el) => {
                   if (el) contentRefs.current.set(version.version, el);
@@ -933,68 +1114,68 @@ const ChangelogPage: React.FC = () => {
                 }}
                 className={`
                   overflow-y-auto transition-all duration-500 ease-in-out
-                  ${isExpanded ? 'max-h-[1200px] sm:max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}
+                  ${isExpanded ? 'max-h-[2000px] sm:max-h-[1200px] opacity-100' : 'max-h-0 opacity-0'}
                   custom-scrollbar
                 `}
               >
-                <div className="px-4 sm:px-6 pb-4 sm:pb-6">
-                  <div className="space-y-4 sm:space-y-6">
+                <div className="px-3 sm:px-6 pb-3 sm:pb-6">
+                  <div className="space-y-3 sm:space-y-6">
                     {version.changes.map((category, catIndex) => (
                       <div
                         key={catIndex}
-                        className="space-y-2 sm:space-y-3 transform transition-all duration-500 hover:translate-x-1"
+                        className="space-y-1.5 sm:space-y-3 transform transition-all duration-500 hover:translate-x-0.5 sm:hover:translate-x-1"
                         style={{
                           animation: `slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) ${catIndex * 0.08}s both`,
                         }}
                       >
-                        {/* Título de categoría sticky */}
+                        {/* Título de categoría sticky - Mejorado para móvil */}
                         <div 
-                          className="flex items-center gap-2 sm:gap-3 group sticky top-0 py-1.5 sm:py-2 z-10 rounded-lg"
+                          className="flex items-center gap-1.5 sm:gap-3 group sticky top-0 py-1 sm:py-2 z-10 rounded-lg"
                           style={{
-                            backgroundColor: isDarkMode ? 'rgba(17, 24, 39, 0.95)' : 'rgba(249, 250, 251, 0.95)',
+                            backgroundColor: isDarkMode ? 'rgba(17, 24, 39, 0.98)' : 'rgba(249, 250, 251, 0.98)',
                             backdropFilter: 'blur(12px)',
                           }}
                         >
                           <div
                             className={`
-                              p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl transition-all duration-300
+                              p-1 sm:p-2.5 rounded-lg sm:rounded-xl transition-all duration-300
                               group-hover:scale-110 group-hover:shadow-lg
                             `}
                             style={{
                               backgroundColor: `${category.color}20`,
-                              boxShadow: `0 4px 12px ${category.color}30`,
+                              boxShadow: `0 2px 8px ${category.color}30`,
                             }}
                           >
                             <span style={{ color: category.color }} className="transition-transform duration-300 group-hover:rotate-12 block">
                               {category.icon}
                             </span>
                           </div>
-                          <h3 className="font-bold text-gray-800 dark:text-gray-200 text-sm sm:text-lg">
+                          <h3 className="font-bold text-gray-800 dark:text-gray-200 text-xs sm:text-lg">
                             {category.title}
                           </h3>
                           <div className="flex-1 h-px bg-gradient-to-r from-gray-300 to-transparent dark:from-gray-700" />
                         </div>
 
-                        {/* Items de la categoría */}
-                        <div className="space-y-2 sm:space-y-3 pl-3 sm:pl-6">
+                        {/* Items de la categoría - Espaciado mejorado para móvil */}
+                        <div className="space-y-1.5 sm:space-y-3 pl-2 sm:pl-6">
                           {category.items.map((item, itemIndex) => (
                             <div
                               key={itemIndex}
-                              className="group/item p-3 sm:p-4 rounded-lg sm:rounded-xl transition-all duration-300 hover:shadow-xl hover:scale-[1.01]"
+                              className="group/item p-2 sm:p-4 rounded-lg sm:rounded-xl transition-all duration-300 hover:shadow-lg hover:scale-[1.01]"
                               style={{
-                                backgroundColor: isDarkMode ? 'rgba(31, 41, 55, 0.6)' : 'rgba(255, 255, 255, 0.8)',
-                                border: `1px solid ${category.color}20`,
+                                backgroundColor: isDarkMode ? 'rgba(31, 41, 55, 0.7)' : 'rgba(255, 255, 255, 0.85)',
+                                border: `1px solid ${category.color}15`,
                                 backdropFilter: 'blur(4px)',
                               }}
                             >
-                              {/* Descripción principal */}
-                              <div className="flex items-start gap-2 sm:gap-3">
+                              {/* Descripción principal - Texto más legible */}
+                              <div className="flex items-start gap-1.5 sm:gap-3">
                                 <div
-                                  className="p-1 rounded-lg mt-0.5 transition-all duration-300 group-hover/item:scale-110"
-                                  style={{ backgroundColor: `${category.color}25` }}
+                                  className="p-0.5 sm:p-1 rounded-lg mt-0.5 transition-all duration-300 group-hover/item:scale-110 flex-shrink-0"
+                                  style={{ backgroundColor: `${category.color}20` }}
                                 >
                                   <svg
-                                    className="w-3 h-3 sm:w-3.5 sm:h-3.5 transition-transform duration-300 group-hover/item:translate-x-0.5"
+                                    className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 transition-transform duration-300 group-hover/item:translate-x-0.5"
                                     style={{ color: category.color }}
                                     fill="none"
                                     stroke="currentColor"
@@ -1003,24 +1184,24 @@ const ChangelogPage: React.FC = () => {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                                   </svg>
                                 </div>
-                                <span className="text-xs sm:text-sm font-semibold text-gray-800 dark:text-gray-200">
+                                <span className="text-[11px] sm:text-sm font-semibold text-gray-800 dark:text-gray-200 leading-relaxed">
                                   {item.description}
                                 </span>
                               </div>
 
-                              {/* Sub-items */}
+                              {/* Sub-items - Mejor legibilidad en móvil */}
                               {item.subItems && item.subItems.length > 0 && (
-                                <div className="mt-2 sm:mt-3 ml-6 sm:ml-10 space-y-1.5 sm:space-y-2">
+                                <div className="mt-1.5 sm:mt-3 ml-4 sm:ml-10 space-y-1 sm:space-y-2">
                                   {item.subItems.map((subItem, subIndex) => (
                                     <div
                                       key={subIndex}
-                                      className="flex items-start gap-2 text-[11px] sm:text-xs group/sub transition-all duration-200 hover:translate-x-1"
+                                      className="flex items-start gap-1.5 sm:gap-2 text-[10px] sm:text-xs group/sub transition-all duration-200 hover:translate-x-0.5"
                                     >
                                       <span
-                                        className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full mt-1.5 sm:mt-1.5 transition-all duration-300 group-hover/sub:scale-150"
+                                        className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full mt-1 sm:mt-1.5 transition-all duration-300 group-hover/sub:scale-150 flex-shrink-0"
                                         style={{ backgroundColor: category.color }}
                                       />
-                                      <span className="text-gray-600 dark:text-gray-400 group-hover/sub:text-gray-800 dark:group-hover/sub:text-gray-200 transition-colors duration-300">
+                                      <span className="text-gray-600 dark:text-gray-400 group-hover/sub:text-gray-800 dark:group-hover/sub:text-gray-200 transition-colors duration-300 leading-relaxed">
                                         {subItem}
                                       </span>
                                     </div>
@@ -1036,14 +1217,14 @@ const ChangelogPage: React.FC = () => {
                     {/* Badge de versión inicial */}
                     {version.isInitial && (
                       <div
-                        className="mt-4 sm:mt-6 p-4 sm:p-6 rounded-xl text-center transform transition-all duration-500 hover:scale-[1.02] animate-pulse"
+                        className="mt-3 sm:mt-6 p-4 sm:p-6 rounded-xl text-center transform transition-all duration-500 hover:scale-[1.02] animate-pulse"
                         style={{
                           background: `linear-gradient(135deg, ${gradientStart}15, ${gradientEnd}15)`,
                           border: `1px solid ${gradientStart}30`,
                           backdropFilter: 'blur(8px)',
                         }}
                       >
-                        <span className="text-sm sm:text-base font-bold" style={{ color: gradientStart }}>
+                        <span className="text-xs sm:text-base font-bold" style={{ color: gradientStart }}>
                           🎉 El comienzo de QuickNote Web 🎉
                         </span>
                       </div>
@@ -1056,23 +1237,36 @@ const ChangelogPage: React.FC = () => {
         })}
       </div>
 
-      {/* Estilos globales */}
+      {/* Estilos globales - Mejorados para móvil */}
       <style>{`
         @keyframes slideIn {
           from {
             opacity: 0;
-            transform: translateX(-30px);
+            transform: translateX(-15px);
           }
           to {
             opacity: 1;
             transform: translateX(0);
           }
         }
+        
+        @media (min-width: 640px) {
+          @keyframes slideIn {
+            from {
+              opacity: 0;
+              transform: translateX(-30px);
+            }
+            to {
+              opacity: 1;
+              transform: translateX(0);
+            }
+          }
+        }
 
-        /* Custom scrollbar premium */
+        /* Custom scrollbar premium - Mejorado para móvil */
         .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-          height: 4px;
+          width: 3px;
+          height: 3px;
         }
         
         @media (min-width: 640px) {
@@ -1113,6 +1307,13 @@ const ChangelogPage: React.FC = () => {
         /* Smooth transitions */
         * {
           -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Mejora de contraste y legibilidad en móvil */
+        @media (max-width: 640px) {
+          .custom-scrollbar {
+            font-size: 10px;
+          }
         }
       `}</style>
     </div>

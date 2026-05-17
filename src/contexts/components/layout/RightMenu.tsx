@@ -377,7 +377,7 @@ const RightMenu: React.FC<RightMenuProps> = ({
         {
           icon: <Clock className="w-5 h-5" />,
           label: 'Cambios recientes',
-          description: 'v2.4.0 · 7 actualizaciones implementadas',
+          description: 'v2.6.0 · 8 actualizaciones registracas',
           onClick: () => navigate('/changelog'),
           color: 'gray',
         },
@@ -674,7 +674,7 @@ const RightMenu: React.FC<RightMenuProps> = ({
             className="mt-6 sm:mt-8 pt-3 sm:pt-4 border-t border-gray-200 dark:border-gray-700"
           >
             <p className="text-[10px] sm:text-xs text-center text-gray-500 dark:text-gray-500">
-              QuickNote v2.4.0 · {new Date().toLocaleDateString()}
+              QuickNote v2.6.0 · {new Date().toLocaleDateString()}
             </p>
           </motion.div>
         </div>

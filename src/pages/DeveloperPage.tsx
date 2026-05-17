@@ -178,7 +178,7 @@ const DeveloperPage: React.FC = () => {
 
             <div className="absolute top-2 right-2 md:top-4 md:right-4">
               <span className="inline-flex items-center px-2 py-1 md:px-3 md:py-1.5 bg-white/20 backdrop-blur-sm rounded-full text-white text-[10px] md:text-sm font-medium border border-white/30 shadow-lg">
-                v 2.4.0
+                v 2.6.0
               </span>
             </div>
           </div>
@@ -547,7 +547,7 @@ const DeveloperPage: React.FC = () => {
       {/* Footer */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 md:mt-8 pb-4 md:pb-6">
         <p className="text-center text-[10px] md:text-xs text-gray-500 dark:text-gray-400">
-          QuickNote v2.4.0 · Todos los derechos reservados
+          QuickNote v2.6.0 · Todos los derechos reservados
         </p>
       </div>
     </div>

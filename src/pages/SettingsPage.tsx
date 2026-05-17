@@ -1195,7 +1195,7 @@ const SettingsPage: React.FC = () => {
             icon={<Info className="w-5 h-5 text-blue-400" />}
             iconColor="bg-blue-400/10"
             title="Versión"
-            subtitle="QuickNote v2.4.0"
+            subtitle="QuickNote v2.6.0"
             showArrow={false}
           />
           <SettingsTile

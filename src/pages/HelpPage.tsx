@@ -359,7 +359,7 @@ const HelpPage: React.FC = () => {
   const quickGuides = [
     {
       id: 'primeros-pasos',
-      icon: <Rocket className="w-5 h-5 text-amber-500" />,
+      icon: <Rocket className="w-5 h-5 text-amber-500" size={0} />,
       iconColor: 'bg-gradient-to-br from-amber-500/20 to-orange-500/20',
       title: 'Primeros pasos',
       description: 'Guía básica para comenzar a usar QuickNote',
@@ -453,7 +453,7 @@ const HelpPage: React.FC = () => {
       question: '¿Cómo personalizar una nota?',
       answer: 'Puedes personalizar el color de fondo, la forma (cuadrada, redondeada, ovalada o píldora), el icono y el tamaño de la nota. También puedes ajustar la intensidad del color. Todas estas opciones están disponibles al editar la nota o desde la sección de personalización.',
       category: 'Notas',
-      icon: <Palette className="w-5 h-5" />
+      icon: <Palette className="w-5 h-5" size={0} />
     },
     // Etiquetas
     {

@@ -578,7 +578,7 @@ const LeftMenu: React.FC<LeftMenuProps> = ({ isOpen, onClose, onNavigate }) => {
             className="mt-4 sm:mt-8 pt-3 sm:pt-4 border-t border-gray-200 dark:border-gray-800"
           >
             <p className="text-[10px] sm:text-xs text-center text-gray-400 dark:text-gray-600">
-              QuickNote v.2.4.0
+              QuickNote v.2.6.0
             </p>
           </motion.div>
         </div>
