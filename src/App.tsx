@@ -416,11 +416,13 @@ function App() {
       {/* Contenedor de notificaciones Toast */}
       <ToastContainer />
 
-      {/* ✅ Componente de restauración automática desde la nube */}
+      {/* Componente de restauración automática desde la nube */}
       {isAuthenticated && !isLoading && <CloudRestorePrompt />}
 
-      {/* ✅ Modal global de Backup Selectivo */}
+      {/* Modal global de Backup Selectivo */}
       <SelectiveBackupModal />
+
+      {/* ❌ Widget de Auto-Backup eliminado - Ahora solo aparece en NotesPage.tsx */}
     </>
   );
 }

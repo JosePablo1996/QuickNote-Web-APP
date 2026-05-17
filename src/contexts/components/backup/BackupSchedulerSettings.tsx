@@ -9,12 +9,18 @@ import {
   RefreshCw,
   Power,
   PowerOff,
-  Info
+  Info,
+  Cloud,
+  Wifi,
+  WifiOff,
+  AlertTriangle
 } from 'lucide-react';
 import { useTheme } from '../../../hooks/useTheme';
 import { useNotes } from '../../../hooks/useNotes';
+import { useAuth } from '../../../hooks/useAuth';
 import { useToast } from '../../../hooks/useToast';
 import { backupScheduler, BackupSchedule, ScheduleFrequency } from '../../../services/backupScheduler';
+import { backupService } from '../../../services/backup';
 import LoadingSpinner from '../ui/LoadingSpinner';
 
 interface BackupSchedulerSettingsProps {
@@ -24,12 +30,19 @@ interface BackupSchedulerSettingsProps {
 const BackupSchedulerSettings: React.FC<BackupSchedulerSettingsProps> = ({ onBackupComplete }) => {
   const { isDarkMode } = useTheme();
   const { notes } = useNotes();
+  const { user } = useAuth();
   const { success, error: showError, info } = useToast();
   
   const [schedule, setSchedule] = useState<BackupSchedule>(backupScheduler.getSchedule());
   const [isExecuting, setIsExecuting] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<boolean>(false);
   const [showInfo, setShowInfo] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(() => {
+    const saved = localStorage.getItem('quicknote_last_sync_time');
+    return saved ? new Date(saved) : null;
+  });
+  const [pendingBackupsCount, setPendingBackupsCount] = useState(0);
 
   // Suscribirse a cambios en el scheduler
   useEffect(() => {
@@ -39,6 +52,9 @@ const BackupSchedulerSettings: React.FC<BackupSchedulerSettingsProps> = ({ onBac
     
     // Verificar permisos de notificación
     checkNotificationPermission();
+    
+    // Cargar backups pendientes
+    loadPendingBackups();
     
     // Escuchar evento de trigger
     const handleTrigger = () => {
@@ -51,6 +67,16 @@ const BackupSchedulerSettings: React.FC<BackupSchedulerSettingsProps> = ({ onBac
       window.removeEventListener('backup-scheduler-trigger', handleTrigger);
     };
   }, []);
+
+  const loadPendingBackups = async () => {
+    try {
+      const backups = await backupService.getBackups();
+      const unsyncedCount = backups.filter(b => b.source === 'local' && !b.cloud_id).length;
+      setPendingBackupsCount(unsyncedCount);
+    } catch (error) {
+      console.error('Error loading pending backups:', error);
+    }
+  };
 
   const checkNotificationPermission = async () => {
     const hasPermission = await backupScheduler.requestNotificationPermission();
@@ -68,6 +94,7 @@ const BackupSchedulerSettings: React.FC<BackupSchedulerSettingsProps> = ({ onBac
       const backupSuccess = await backupScheduler.executeBackup(notes);
       if (backupSuccess) {
         success('Backup automático completado');
+        await loadPendingBackups();
         if (onBackupComplete) {
           onBackupComplete();
         }
@@ -78,6 +105,42 @@ const BackupSchedulerSettings: React.FC<BackupSchedulerSettingsProps> = ({ onBac
       showError('Error al ejecutar backup');
     } finally {
       setIsExecuting(false);
+    }
+  };
+
+  const handleManualSync = async () => {
+    if (!user) {
+      info('Inicia sesión para sincronizar con la nube');
+      return;
+    }
+    
+    setSyncStatus('syncing');
+    try {
+      const result = await backupService.syncWithCloud();
+      setLastSyncTime(new Date());
+      localStorage.setItem('quicknote_last_sync_time', new Date().toISOString());
+      
+      if (result.synced > 0) {
+        success(`✅ ${result.synced} backups sincronizados con la nube`);
+        setSyncStatus('success');
+        await loadPendingBackups();
+        setTimeout(() => setSyncStatus('idle'), 3000);
+      } else if (result.failed > 0) {
+        info(`⚠️ ${result.failed} backups no pudieron sincronizarse`);
+        setSyncStatus('error');
+        setTimeout(() => setSyncStatus('idle'), 3000);
+      } else {
+        info('📡 Todos los backups ya están sincronizados');
+        setSyncStatus('idle');
+      }
+      
+      if (onBackupComplete) {
+        onBackupComplete();
+      }
+    } catch (error) {
+      showError('Error al sincronizar con la nube');
+      setSyncStatus('error');
+      setTimeout(() => setSyncStatus('idle'), 3000);
     }
   };
 
@@ -123,6 +186,26 @@ const BackupSchedulerSettings: React.FC<BackupSchedulerSettingsProps> = ({ onBac
     return new Date(dateStr).toLocaleString();
   };
 
+  const formatRelativeTime = (date: Date | null): string => {
+    if (!date) return 'Nunca';
+    const now = new Date();
+    const diffSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    
+    if (diffSeconds < 60) return `hace ${diffSeconds} segundos`;
+    if (diffSeconds < 3600) return `hace ${Math.floor(diffSeconds / 60)} minutos`;
+    if (diffSeconds < 86400) return `hace ${Math.floor(diffSeconds / 3600)} horas`;
+    return `hace ${Math.floor(diffSeconds / 86400)} días`;
+  };
+
+  const getSyncStatusIcon = () => {
+    switch (syncStatus) {
+      case 'syncing': return <RefreshCw className="w-4 h-4 animate-spin text-blue-500" />;
+      case 'success': return <CheckCircle className="w-4 h-4 text-green-500" />;
+      case 'error': return <AlertTriangle className="w-4 h-4 text-red-500" />;
+      default: return <Cloud className="w-4 h-4 text-purple-400" />;
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -163,6 +246,7 @@ const BackupSchedulerSettings: React.FC<BackupSchedulerSettingsProps> = ({ onBac
             <li>Solo se ejecuta si tienes notas nuevas desde el último backup</li>
             <li>Recibirás una notificación cuando se complete</li>
             <li>Los backups se guardan en la nube con el límite de 10</li>
+            <li>Puedes sincronizar manualmente backups locales pendientes</li>
           </ul>
         </motion.div>
       )}
@@ -299,6 +383,61 @@ const BackupSchedulerSettings: React.FC<BackupSchedulerSettingsProps> = ({ onBac
         )}
       </div>
 
+      {/* ✅ NUEVO: Sección de sincronización manual */}
+      {user && (
+        <div className={`rounded-xl p-4 border ${
+          isDarkMode
+            ? 'bg-gradient-to-br from-purple-900/20 to-pink-900/20 border-purple-500/30'
+            : 'bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200'
+        }`}>
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2 rounded-lg bg-purple-500/20">
+              <Cloud className="w-4 h-4 text-purple-400" />
+            </div>
+            <div className="flex-1">
+              <p className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                Sincronización Manual
+              </p>
+              <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                Sube backups locales pendientes a la nube
+              </p>
+            </div>
+            {pendingBackupsCount > 0 && (
+              <span className="px-2 py-1 text-xs font-bold rounded-full bg-amber-500/20 text-amber-500">
+                {pendingBackupsCount} pendiente(s)
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {getSyncStatusIcon()}
+              <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                {syncStatus === 'syncing' && 'Sincronizando...'}
+                {syncStatus === 'success' && '¡Sincronizado!'}
+                {syncStatus === 'error' && 'Error en sincronización'}
+                {syncStatus === 'idle' && lastSyncTime && `Última sincronización: ${formatRelativeTime(lastSyncTime)}`}
+                {syncStatus === 'idle' && !lastSyncTime && 'No se ha sincronizado aún'}
+              </span>
+            </div>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleManualSync}
+              disabled={syncStatus === 'syncing'}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all ${
+                isDarkMode
+                  ? 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
+                  : 'bg-purple-100 text-purple-600 hover:bg-purple-200'
+              } ${syncStatus === 'syncing' ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${syncStatus === 'syncing' ? 'animate-spin' : ''}`} />
+              <span>Sincronizar ahora</span>
+            </motion.button>
+          </div>
+        </div>
+      )}
+
       {/* Resumen de actividad */}
       {schedule.totalBackups > 0 && (
         <div className={`p-3 rounded-xl ${
@@ -317,6 +456,11 @@ const BackupSchedulerSettings: React.FC<BackupSchedulerSettingsProps> = ({ onBac
             <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
               📦 Total de backups automáticos: {schedule.totalBackups}
             </p>
+            {pendingBackupsCount > 0 && (
+              <p className={`text-xs ${isDarkMode ? 'text-amber-400' : 'text-amber-600'}`}>
+                ⏳ Backups locales pendientes de sincronizar: {pendingBackupsCount}
+              </p>
+            )}
           </div>
         </div>
       )}

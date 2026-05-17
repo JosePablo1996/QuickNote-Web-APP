@@ -100,6 +100,9 @@ export interface TwoFactorLoginVerifyResponse {
 // ============================================
 
 export interface CloudBackupMetadata {
+  updated_at: any;
+  is_accumulative: any;
+  version: any;
   id: string;
   user_id: string;
   file_name: string;

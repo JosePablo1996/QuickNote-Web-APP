@@ -33,6 +33,8 @@ import {
   Download
 } from 'lucide-react';
 import ExportButton from '../contexts/components/export/ExportButton';
+import AutoBackupIndicator from '../contexts/components/backup/AutoBackupIndicator';
+import { useAutoBackup } from '../hooks/useAutoBackup';
 
 // ========== IMPORTACIONES DE NUEVAS PROPIEDADES ==========
 import {
@@ -67,6 +69,9 @@ const NotesPage: React.FC = () => {
     getNotesByTag,
     syncNotes,
   } = useNotes();
+
+  // ✅ Estado del auto-backup para saber si hay cambios pendientes
+  const { pendingChanges } = useAutoBackup({ enabled: true });
 
   // Estados para los menús
   const [showLeftMenu, setShowLeftMenu] = useState(false);
@@ -829,10 +834,19 @@ const NotesPage: React.FC = () => {
             </motion.div>
           ) : (
             <>
-              {/* Contador de resultados */}
-              <div className="mb-4 text-sm text-gray-500 dark:text-gray-400">
-                Mostrando {displayNotes.length} nota{displayNotes.length !== 1 ? 's' : ''}
-                {activeFiltersCount > 0 && ' (filtradas)'}
+              {/* Contador de resultados con widget de auto-backup integrado */}
+              <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="text-sm text-gray-500 dark:text-gray-400">
+                  Mostrando {displayNotes.length} nota{displayNotes.length !== 1 ? 's' : ''}
+                  {activeFiltersCount > 0 && ' (filtradas)'}
+                </div>
+                
+                {/* ✅ Widget de Auto-Backup - Solo aparece cuando hay cambios pendientes */}
+                {pendingChanges && (
+                  <div className="flex-shrink-0">
+                    <AutoBackupIndicator position="inline" />
+                  </div>
+                )}
               </div>
               
               <motion.div

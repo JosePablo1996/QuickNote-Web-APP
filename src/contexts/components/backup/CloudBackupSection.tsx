@@ -22,6 +22,13 @@ import {
 import { Note } from '../../../models/Note';
 import { openSelectiveBackupModal } from '../../../hooks/useSelectiveBackup';
 
+// Constantes para valores por defecto
+const DEFAULT_COLOR = '#3B82F6';
+const DEFAULT_SHAPE = 'rounded';
+const DEFAULT_ICON = 'default';
+const DEFAULT_SIZE = 'normal';
+const DEFAULT_COLOR_INTENSITY = 'medium';
+
 // Servicio de backup usando el api centralizado
 const backupService = {
   getCloudBackups: () => api.getCloudBackups(),
@@ -32,6 +39,28 @@ const backupService = {
 
 // Constante para el límite máximo de backups
 const MAX_BACKUPS = 10;
+
+// ✅ Función para mapear datos del backup al modelo Note completo (PRESERVANDO PERSONALIZACIÓN)
+const mapToNoteModel = (backupNote: any): Note => {
+  return {
+    id: backupNote.id || crypto.randomUUID(),
+    title: backupNote.title || 'Nota sin título',
+    content: backupNote.content || '',
+    color: backupNote.color || DEFAULT_COLOR,
+    // ✅ PRESERVAR personalización
+    shape: backupNote.shape || DEFAULT_SHAPE,
+    icon: backupNote.icon || DEFAULT_ICON,
+    size: backupNote.size || DEFAULT_SIZE,
+    colorIntensity: backupNote.colorIntensity || DEFAULT_COLOR_INTENSITY,
+    is_favorite: backupNote.is_favorite || false,
+    is_archived: backupNote.is_archived || false,
+    tags: backupNote.tags || [],
+    created_at: backupNote.created_at || new Date().toISOString(),
+    updated_at: backupNote.updated_at || new Date().toISOString(),
+    deleted_at: backupNote.deleted_at || null,
+    user_id: backupNote.user_id || ''
+  };
+};
 
 const CloudBackupSection: React.FC = () => {
   const { isDarkMode } = useTheme();
@@ -119,6 +148,7 @@ const CloudBackupSection: React.FC = () => {
     }
   };
 
+  // ✅ MODIFICADO: Restauración con preservación de personalización
   const handleRestoreCloud = async (backupId: string) => {
     const backup = cloudBackups.find(b => b.id === backupId);
     if (!backup) return;
@@ -145,31 +175,29 @@ const CloudBackupSection: React.FC = () => {
       setCloudProgress(100);
       
       if (restoredNotes && Array.isArray(restoredNotes) && restoredNotes.length > 0) {
+        // ✅ MAPEAR cada nota preservando todos los campos de personalización
+        const notesToRestore: Note[] = restoredNotes.map(mapToNoteModel);
+        
+        // Log para verificar que los campos se están preservando
+        console.log('📝 Notas restauradas con personalización:', notesToRestore.map(n => ({
+          title: n.title,
+          shape: n.shape,
+          icon: n.icon,
+          size: n.size,
+          colorIntensity: n.colorIntensity
+        })));
+        
         setTimeout(() => {
           setShowCloudProgress(false);
-          setCloudSuccessMessage(`✅ ${restoredNotes.length} notas restauradas desde la nube`);
+          setCloudSuccessMessage(`✅ ${notesToRestore.length} notas restauradas desde la nube (con personalización)`);
           setShowCloudSuccess(true);
         }, 500);
-        
-        const notesToRestore: Note[] = restoredNotes.map((note: any) => ({
-          id: note.id || '',
-          title: note.title || '',
-          content: note.content || '',
-          color: note.color || '#FFFFFF',
-          is_favorite: note.is_favorite || false,
-          is_archived: note.is_archived || false,
-          tags: note.tags || [],
-          created_at: note.created_at || new Date().toISOString(),
-          updated_at: note.updated_at || new Date().toISOString(),
-          deleted_at: note.deleted_at || null,
-          user_id: note.user_id || ''
-        }));
         
         if (replaceAllNotes) {
           await replaceAllNotes(notesToRestore);
         }
         
-        success(`✅ ${restoredNotes.length} notas restauradas desde la nube`);
+        success(`✅ ${notesToRestore.length} notas restauradas desde la nube`);
       } else {
         setTimeout(() => {
           setShowCloudProgress(false);
@@ -293,7 +321,7 @@ const CloudBackupSection: React.FC = () => {
           )}
         </motion.button>
 
-        {/* ✅ Botón para Backup Selectivo - Usa el modal global */}
+        {/* Botón para Backup Selectivo */}
         <motion.button
           whileHover={{ scale: 1.01 }}
           whileTap={{ scale: 0.98 }}
@@ -330,13 +358,13 @@ const CloudBackupSection: React.FC = () => {
             {isLimitReached && (
               <span className="text-red-400 dark:text-red-400 flex items-center gap-1">
                 <AlertTriangle className="w-3 h-3" />
-                Límite alcanzado - Los más antiguos se eliminarán automáticamente
+                Límite alcanzado
               </span>
             )}
           </div>
         )}
 
-        {/* Advertencia cuando no hay backups pero el usuario puede crear */}
+        {/* Advertencia cuando no hay backups */}
         {!isLoadingCloud && cloudBackups.length === 0 && (
           <div className="text-center text-xs text-gray-500 dark:text-gray-400 py-1">
             💾 Puedes guardar hasta {MAX_BACKUPS} backups en la nube
@@ -387,7 +415,7 @@ const CloudBackupSection: React.FC = () => {
                       onClick={() => handleRestoreCloud(backup.id)}
                       disabled={isRestoringCloud === backup.id}
                       className="p-2 bg-green-500/10 text-green-400 rounded-lg hover:bg-green-500/20 transition-colors disabled:opacity-50"
-                      title="Restaurar desde la nube"
+                      title="Restaurar desde la nube (preserva personalización)"
                     >
                       {isRestoringCloud === backup.id ? (
                         <LoadingSpinner size="sm" />
@@ -446,6 +474,9 @@ const CloudBackupSection: React.FC = () => {
               isDarkMode ? 'text-blue-300' : 'text-blue-600'
             }`}>
               Tus backups están seguros con Row Level Security. Solo tú puedes acceder a ellos.
+              <span className="block text-[10px] mt-1 opacity-75">
+                ✨ Se preservan todos los estilos: forma, icono, tamaño e intensidad de color.
+              </span>
             </p>
           </div>
         </div>
