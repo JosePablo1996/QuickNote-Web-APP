@@ -54,7 +54,7 @@ export default defineConfig(({ command, mode }) => {
       port: 5173,
       proxy: {
         '/api': {
-          target: 'http://localhost:3001',
+          target: 'http://localhost:8000',
           changeOrigin: true,
           secure: false,
           ws: true,
@@ -69,7 +69,7 @@ export default defineConfig(({ command, mode }) => {
         },
       },
       cors: {
-        origin: ['http://localhost:5173', 'http://localhost:3001'],
+        origin: ['http://localhost:5173', 'http://localhost:8000'],
         credentials: true,
       },
     },

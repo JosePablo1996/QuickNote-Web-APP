@@ -29,6 +29,38 @@ export interface BackupData {
   };
 }
 
+/**
+ * Detectar si estamos en desarrollo
+ */
+const isDevelopment = (): boolean => {
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    return hostname === 'localhost' || hostname === '127.0.0.1';
+  }
+  return false;
+};
+
+/**
+ * Construir URL correctamente (sin duplicar /api/v1)
+ * ✅ CORREGIDO: Usa la misma lógica que api.ts
+ */
+const buildUrl = (path: string): string => {
+  const apiUrl = import.meta.env.VITE_API_URL || '';
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  
+  if (isDevelopment()) {
+    // En desarrollo: usar proxy de Vite
+    console.log(`🔧 Proxy: usando ruta relativa ${normalizedPath}`);
+    return normalizedPath;
+  }
+  
+  // En producción: la URL base NO debe incluir /api/v1
+  const cleanBaseUrl = apiUrl.replace(/\/api\/v1\/?$/, '');
+  const fullUrl = `${cleanBaseUrl}${normalizedPath}`;
+  console.log(`🔧 Producción: ${fullUrl}`);
+  return fullUrl;
+};
+
 class BackupCloudService {
   /**
    * Obtener token JWT de localStorage
@@ -54,34 +86,29 @@ class BackupCloudService {
   }
 
   /**
-   * ✅ Función auxiliar para extraer notas de diferentes estructuras
+   * Función auxiliar para extraer notas de diferentes estructuras
    */
   private extractNotesFromData(data: any): Note[] {
-    // Caso 1: data.notes es un array
     if (data && data.notes && Array.isArray(data.notes)) {
       console.log('📦 [backupCloudService] Estructura detectada: data.notes');
       return data.notes;
     }
     
-    // Caso 2: data es directamente un array
     if (data && Array.isArray(data)) {
       console.log('📦 [backupCloudService] Estructura detectada: array directo');
       return data;
     }
     
-    // Caso 3: data.data.notes (estructura anidada)
     if (data && data.data && data.data.notes && Array.isArray(data.data.notes)) {
       console.log('📦 [backupCloudService] Estructura detectada: data.data.notes');
       return data.data.notes;
     }
     
-    // Caso 4: data.notes_data (estructura de backup)
     if (data && data.notes_data && data.notes_data.notes && Array.isArray(data.notes_data.notes)) {
       console.log('📦 [backupCloudService] Estructura detectada: data.notes_data.notes');
       return data.notes_data.notes;
     }
     
-    // Caso 5: Intentar buscar cualquier propiedad que sea un array de notas
     if (data && typeof data === 'object') {
       for (const key of Object.keys(data)) {
         if (data[key] && Array.isArray(data[key]) && data[key].length > 0 && data[key][0]?.title !== undefined) {
@@ -125,8 +152,8 @@ class BackupCloudService {
     const fileSize = new Blob([jsonContent]).size;
     const fileName = `quicknote_cloud_backup_${Date.now()}.json`;
 
-    const apiUrl = import.meta.env.VITE_API_URL || '';
-    const url = `${apiUrl}/api/v1/backup/cloud`;
+    // ✅ CORREGIDO: Usar buildUrl() para evitar duplicar /api/v1
+    const url = buildUrl('/api/v1/backup/cloud');
 
     console.log(`☁️ Guardando backup en la nube...`);
     console.log(`📡 URL: ${url}`);
@@ -179,8 +206,8 @@ class BackupCloudService {
       return [];
     }
 
-    const apiUrl = import.meta.env.VITE_API_URL || '';
-    const url = `${apiUrl}/api/v1/backup/cloud`;
+    // ✅ CORREGIDO: Usar buildUrl() para evitar duplicar /api/v1
+    const url = buildUrl('/api/v1/backup/cloud');
 
     console.log(`📋 Obteniendo backups de la nube...`);
     console.log(`📡 URL: ${url}`);
@@ -195,6 +222,10 @@ class BackupCloudService {
       });
 
       if (!response.ok) {
+        if (response.status === 404) {
+          console.log('ℹ️ No hay backups en la nube (404)');
+          return [];
+        }
         console.error('❌ Error obteniendo backups:', response.status);
         return [];
       }
@@ -230,8 +261,8 @@ class BackupCloudService {
       return null;
     }
 
-    const apiUrl = import.meta.env.VITE_API_URL || '';
-    const url = `${apiUrl}/api/v1/backup/cloud/${backupId}`;
+    // ✅ CORREGIDO: Usar buildUrl() para evitar duplicar /api/v1
+    const url = buildUrl(`/api/v1/backup/cloud/${backupId}`);
 
     console.log(`🔍 Obteniendo backup ${backupId} de la nube...`);
     console.log(`📡 URL: ${url}`);
@@ -258,7 +289,6 @@ class BackupCloudService {
       const backup = await response.json();
       console.log(`✅ Backup encontrado: ${backup.file_name}`);
       
-      // Asegurar que notes_data sea un objeto válido
       let notesData = backup.notes_data;
       if (typeof notesData === 'string') {
         try {
@@ -288,7 +318,6 @@ class BackupCloudService {
 
   /**
    * Restaurar backup desde Supabase
-   * ✅ MEJORADO: Maneja diferentes estructuras de datos
    */
   async restoreCloudBackup(backupId: string): Promise<Note[]> {
     const cloudBackup = await this.getCloudBackup(backupId);
@@ -298,7 +327,6 @@ class BackupCloudService {
       throw new Error('Backup no encontrado en la nube');
     }
 
-    // Extraer notas de la estructura de datos
     const notes = this.extractNotesFromData(cloudBackup.notes_data);
     
     if (!notes || notes.length === 0) {
@@ -322,8 +350,8 @@ class BackupCloudService {
       return false;
     }
 
-    const apiUrl = import.meta.env.VITE_API_URL || '';
-    const url = `${apiUrl}/api/v1/backup/cloud/${backupId}`;
+    // ✅ CORREGIDO: Usar buildUrl() para evitar duplicar /api/v1
+    const url = buildUrl(`/api/v1/backup/cloud/${backupId}`);
 
     console.log(`🗑️ Eliminando backup ${backupId} de la nube...`);
     console.log(`📡 URL: ${url}`);
@@ -401,8 +429,8 @@ class BackupCloudService {
     console.log('✅ Usuario:', userEmail || 'desconocido');
     console.log('✅ Token longitud:', token.length);
 
-    const apiUrl = import.meta.env.VITE_API_URL || '';
-    const url = `${apiUrl}/api/v1/backup/cloud/sync`;
+    // ✅ CORREGIDO: Usar buildUrl() para evitar duplicar /api/v1
+    const url = buildUrl('/api/v1/backup/cloud/sync');
 
     console.log(`📡 Enviando solicitud de sincronización a: ${url}`);
     console.log(`📡 Backups locales a sincronizar: ${localBackups.length}`);
@@ -447,8 +475,8 @@ class BackupCloudService {
     const jsonContent = JSON.stringify(backupData);
     const fileSize = new Blob([jsonContent]).size;
 
-    const apiUrl = import.meta.env.VITE_API_URL || '';
-    const url = `${apiUrl}/api/v1/backup/cloud`;
+    // ✅ CORREGIDO: Usar buildUrl() para evitar duplicar /api/v1
+    const url = buildUrl('/api/v1/backup/cloud');
 
     console.log(`📤 Subiendo backup a la nube: ${fileName}`);
     console.log(`📡 URL: ${url}`);

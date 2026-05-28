@@ -18,12 +18,14 @@ import { PasskeyLogin } from '../contexts/components/auth/PasskeyLogin';
 import { TwoFactorSetup } from '../contexts/components/auth/TwoFactorSetup';
 import { api, PasskeyCredential } from '../services/api';
 
+// Componente separado de la tarjeta de usuario (ruta corregida)
+import UserProfileCard from '../contexts/components/settings/UserProfileCard';
+
 // ============================================
 // FUNCIÓN PARA DETECTAR SI ESTAMOS EN PRODUCCIÓN
 // ============================================
 
 const isProduction = (): boolean => {
-  // Detectar si es producción (no localhost, no 127.0.0.1, no 192.168.x.x)
   const hostname = window.location.hostname;
   const isLocalhost = hostname === 'localhost' || 
                       hostname === '127.0.0.1' || 
@@ -31,13 +33,9 @@ const isProduction = (): boolean => {
                       hostname.startsWith('10.') ||
                       hostname.endsWith('.local');
   
-  // También verificar si la URL contiene 'onrender.com' (dominio de producción de Render)
   const isRenderProduction = window.location.hostname.includes('onrender.com');
-  
-  // También verificar variable de entorno
   const isEnvProduction = process.env.NODE_ENV === 'production';
   
-  // Si es Render o si es producción y no es localhost
   const result = !isLocalhost && (isRenderProduction || isEnvProduction);
   
   console.log(`🔍 Modo: ${result ? 'PRODUCCIÓN' : 'DESARROLLO'} (hostname: ${hostname})`);
@@ -72,6 +70,7 @@ const SettingsTile = ({
   trailing,
   onClick,
   showArrow = true,
+  danger = false,
 }: {
   icon: React.ReactNode;
   iconColor: string;
@@ -80,22 +79,27 @@ const SettingsTile = ({
   trailing?: React.ReactNode;
   onClick?: () => void;
   showArrow?: boolean;
+  danger?: boolean;
 }) => (
   <div
     onClick={onClick}
-    className="flex items-center gap-4 p-4 cursor-pointer hover:bg-gray-100/50 dark:hover:bg-gray-700/50 transition-colors border-b last:border-b-0 border-gray-200 dark:border-gray-700"
+    className={`flex items-center gap-4 p-4 cursor-pointer hover:bg-gray-100/50 dark:hover:bg-gray-700/50 transition-colors border-b last:border-b-0 border-gray-200 dark:border-gray-700 ${danger ? 'hover:bg-red-50/50 dark:hover:bg-red-900/20' : ''}`}
   >
     <div className={`p-3 rounded-xl ${iconColor}`}>
       {icon}
     </div>
     <div className="flex-1 min-w-0">
-      <h3 className="font-medium text-gray-800 dark:text-gray-200">{title}</h3>
+      <h3 className={`font-medium ${danger ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-gray-200'}`}>
+        {title}
+      </h3>
       {subtitle && (
-        <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{subtitle}</p>
+        <p className={`text-sm truncate ${danger ? 'text-red-400 dark:text-red-300/70' : 'text-gray-500 dark:text-gray-400'}`}>
+          {subtitle}
+        </p>
       )}
     </div>
     {trailing || (showArrow && (
-      <ChevronRight className="w-5 h-5 text-gray-400" />
+      <ChevronRight className={`w-5 h-5 ${danger ? 'text-red-400' : 'text-gray-400'}`} />
     ))}
   </div>
 );
@@ -147,203 +151,6 @@ const Switch = ({ enabled, onChange }: { enabled: boolean; onChange: (value: boo
     />
   </button>
 );
-
-// ============================================
-// COMPONENTE: USER PROFILE HEADER (CENTRADO, AVATAR CUADRADO)
-// ============================================
-
-const UserProfileHeader: React.FC = () => {
-  const { user } = useAuth();
-  const { isDarkMode } = useTheme();
-  const [avatarError, setAvatarError] = useState(false);
-
-  const fullName = user?.name || user?.email?.split('@')[0] || 'Usuario';
-  const email = user?.email || '';
-  const avatarUrl = user?.avatar || '';
-
-  const getInitials = (name?: string) => {
-    if (!name || name === 'Usuario') return '?';
-    const parts = name.trim().split(' ');
-    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-    return name.substring(0, 2).toUpperCase();
-  };
-
-  const getAvatarColor = (name?: string) => {
-    const colors = [
-      'from-purple-500 to-indigo-500',
-      'from-violet-500 to-purple-500',
-      'from-blue-500 to-indigo-500',
-      'from-fuchsia-500 to-purple-500',
-    ];
-    const index = (name || 'user').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return colors[Math.abs(index) % colors.length];
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: -20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="relative group mb-6"
-    >
-      <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500 via-indigo-500 to-blue-500 rounded-2xl blur opacity-30 group-hover:opacity-50 transition duration-300" />
-      
-      <div className={`relative rounded-2xl p-6 md:p-8 ${
-        isDarkMode 
-          ? 'bg-gradient-to-br from-gray-800/95 to-gray-900/95' 
-          : 'bg-gradient-to-br from-white/95 to-gray-50/95'
-      } backdrop-blur-lg border-2 border-white/20 dark:border-gray-700/30`}>
-        
-        {/* Contenido centrado */}
-        <div className="flex flex-col items-center text-center">
-          {/* Avatar cuadrado con esquinas redondeadas */}
-          <div className="relative mb-4">
-            <div className="absolute -inset-1 bg-gradient-to-r from-purple-400 to-indigo-400 rounded-2xl blur-md opacity-60" />
-            <motion.div 
-              className={`relative w-24 h-24 rounded-2xl bg-gradient-to-br ${getAvatarColor(fullName)} flex items-center justify-center border-4 border-white dark:border-gray-800 shadow-xl overflow-hidden`}
-            >
-              {(avatarUrl && !avatarError) ? (
-                <img 
-                  src={avatarUrl} 
-                  alt={fullName}
-                  className="w-full h-full object-cover"
-                  onError={() => setAvatarError(true)}
-                />
-              ) : (
-                <span className="text-3xl font-bold text-white">
-                  {getInitials(fullName)}
-                </span>
-              )}
-            </motion.div>
-            <div className="absolute -bottom-1 -right-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full p-1.5 shadow-lg">
-              <BadgeCheck className="w-5 h-5 text-white" />
-            </div>
-          </div>
-
-          {/* Nombre del usuario */}
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-            {fullName}
-          </h2>
-          
-          {/* Email */}
-          <div className="flex items-center justify-center gap-2 mt-1">
-            <Mail className="w-4 h-4 text-gray-400" />
-            <span className="text-sm text-gray-500 dark:text-gray-400">
-              {email || 'Sin correo'}
-            </span>
-          </div>
-
-          {/* Badge verificado */}
-          <div className="inline-flex items-center gap-1 px-3 py-1 mt-2 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-full border border-blue-500/30">
-            <BadgeCheck className="w-3.5 h-3.5 text-blue-500" />
-            <span className="text-xs font-medium text-blue-600 dark:text-blue-400">Cuenta verificada</span>
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  );
-};
-
-// ============================================
-// COMPONENTE: MODAL CERRAR SESIÓN (NUEVO DISEÑO)
-// ============================================
-
-const LogoutModal: React.FC<{
-  isOpen: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-}> = ({ isOpen, onClose, onConfirm }) => {
-  const { isDarkMode } = useTheme();
-  const { user } = useAuth();
-  const [avatarError, setAvatarError] = useState(false);
-
-  const fullName = user?.name || user?.email?.split('@')[0] || 'Usuario';
-  const email = user?.email || '';
-  const avatarUrl = user?.avatar || '';
-
-  const getInitials = (name?: string) => {
-    if (!name || name === 'Usuario') return '?';
-    const parts = name.trim().split(' ');
-    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-    return name.substring(0, 2).toUpperCase();
-  };
-
-  const getAvatarColor = (name?: string) => {
-    const colors = [
-      'from-purple-500 to-indigo-500',
-      'from-violet-500 to-purple-500',
-      'from-blue-500 to-indigo-500',
-      'from-fuchsia-500 to-purple-500',
-    ];
-    const index = (name || 'user').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return colors[Math.abs(index) % colors.length];
-  };
-
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0, y: 20 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.9, opacity: 0, y: 20 }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className={`relative w-80 rounded-2xl overflow-hidden shadow-2xl ${
-              isDarkMode 
-                ? 'bg-gray-800' 
-                : 'bg-white'
-            }`}
-          >
-            {/* Icono superior */}
-            <div className="flex justify-center pt-6 pb-2">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-lg">
-                <LogOut className="w-8 h-8 text-white" />
-              </div>
-            </div>
-
-            {/* Título */}
-            <h3 className="text-xl font-bold text-center text-gray-900 dark:text-white mb-2">
-              Cerrar sesión
-            </h3>
-
-            {/* Nombre del usuario */}
-            <p className="text-center text-gray-600 dark:text-gray-300 font-medium">
-              {fullName}
-            </p>
-
-            {/* Email del usuario */}
-            <p className="text-center text-xs text-gray-500 dark:text-gray-400 mb-4 px-6 break-all">
-              {email}
-            </p>
-
-            {/* Mensaje de confirmación */}
-            <p className="text-center text-sm text-gray-600 dark:text-gray-400 mb-6 px-6">
-              ¿Estás seguro de que deseas cerrar sesión?
-            </p>
-            <p className="text-center text-xs text-gray-500 dark:text-gray-500 mb-6 px-6">
-              Podrás volver a iniciar sesión cuando quieras
-            </p>
-
-            {/* Botones */}
-            <div className="flex border-t border-gray-200 dark:border-gray-700">
-              <button
-                onClick={onClose}
-                className="flex-1 py-3 text-center text-gray-600 dark:text-gray-400 font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-r border-gray-200 dark:border-gray-700"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={onConfirm}
-                className="flex-1 py-3 text-center text-red-600 dark:text-red-400 font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-              >
-                Cerrar sesión
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
-  );
-};
 
 // ============================================
 // COMPONENTE: PASSKEY MANAGEMENT SECTION (SOLO DESARROLLO)
@@ -963,6 +770,148 @@ const TwoFactorManagementSection: React.FC = () => {
 };
 
 // ============================================
+// MODAL DE CERRAR SESIÓN (INCLUIDO DIRECTAMENTE)
+// ============================================
+
+const LogoutModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  isLoading?: boolean;
+}> = ({ isOpen, onClose, onConfirm, isLoading = false }) => {
+  const { isDarkMode } = useTheme();
+  const { user } = useAuth();
+  const [avatarError, setAvatarError] = useState(false);
+
+  const fullName = user?.name || user?.email?.split('@')[0] || 'Usuario';
+  const email = user?.email || '';
+  const avatarUrl = user?.avatar || '';
+
+  const getInitials = (name?: string) => {
+    if (!name || name === 'Usuario') return '?';
+    const parts = name.trim().split(' ');
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  const getAvatarColor = (name?: string) => {
+    const colors = [
+      'from-purple-500 to-indigo-500',
+      'from-violet-500 to-purple-500',
+      'from-blue-500 to-indigo-500',
+      'from-fuchsia-500 to-purple-500',
+    ];
+    const index = (name || 'user').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return colors[Math.abs(index) % colors.length];
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* Overlay */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+          />
+          
+          {/* Modal */}
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className={`relative w-80 rounded-2xl overflow-hidden shadow-2xl ${
+                isDarkMode 
+                  ? 'bg-gray-800' 
+                  : 'bg-white'
+              }`}
+            >
+              {/* Icono superior */}
+              <div className="flex justify-center pt-6 pb-2">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-lg">
+                  <LogOut className="w-8 h-8 text-white" />
+                </div>
+              </div>
+
+              {/* Título */}
+              <h3 className="text-xl font-bold text-center text-gray-900 dark:text-white mb-2">
+                Cerrar sesión
+              </h3>
+
+              {/* Avatar miniatura */}
+              <div className="flex justify-center mb-2">
+                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${getAvatarColor(fullName)} flex items-center justify-center border-2 border-white dark:border-gray-700 shadow-md`}>
+                  {(avatarUrl && !avatarError) ? (
+                    <img 
+                      src={avatarUrl} 
+                      alt={fullName}
+                      className="w-full h-full object-cover rounded-xl"
+                      onError={() => setAvatarError(true)}
+                    />
+                  ) : (
+                    <span className="text-lg font-bold text-white">
+                      {getInitials(fullName)}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Nombre del usuario */}
+              <p className="text-center text-gray-900 dark:text-white font-semibold">
+                {fullName}
+              </p>
+
+              {/* Email del usuario */}
+              <p className="text-center text-xs text-gray-500 dark:text-gray-400 mb-4 px-6 break-all">
+                {email}
+              </p>
+
+              {/* Mensaje de confirmación */}
+              <p className="text-center text-sm text-gray-600 dark:text-gray-400 mb-2 px-6">
+                ¿Estás seguro de que deseas cerrar sesión?
+              </p>
+              <p className="text-center text-xs text-gray-500 dark:text-gray-500 mb-6 px-6">
+                Podrás volver a iniciar sesión cuando quieras
+              </p>
+
+              {/* Botones */}
+              <div className="flex border-t border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={onClose}
+                  disabled={isLoading}
+                  className="flex-1 py-3 text-center text-gray-600 dark:text-gray-400 font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-r border-gray-200 dark:border-gray-700 disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={onConfirm}
+                  disabled={isLoading}
+                  className="flex-1 py-3 text-center text-red-600 dark:text-red-400 font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Cerrando...</span>
+                    </>
+                  ) : (
+                    'Cerrar sesión'
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+};
+
+// ============================================
 // COMPONENTE PRINCIPAL SETTINGS PAGE
 // ============================================
 
@@ -976,6 +925,7 @@ const SettingsPage: React.FC = () => {
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
   const [showPasswordDropdown, setShowPasswordDropdown] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   
   // ✅ Detectar si estamos en producción
   const [showPasskeys, setShowPasskeys] = useState(false);
@@ -998,8 +948,10 @@ const SettingsPage: React.FC = () => {
     setShowPasswordDropdown(false);
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    await logout();
+    setIsLoggingOut(false);
     navigate('/login');
   };
 
@@ -1024,8 +976,8 @@ const SettingsPage: React.FC = () => {
 
       {/* Contenido - Responsive */}
       <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6">
-        {/* Perfil de usuario */}
-        <UserProfileHeader />
+        {/* Perfil de usuario - Componente separado */}
+        <UserProfileCard />
 
         {/* Apariencia */}
         <SectionHeader title="Apariencia" />
@@ -1174,17 +1126,15 @@ const SettingsPage: React.FC = () => {
             subtitle="Crear y restaurar copias de seguridad de tus notas"
             onClick={() => navigate('/backup')}
           />
-        </GlassCard>
 
-        {/* Cerrar sesión */}
-        <SectionHeader title="Sesión" />
-        <GlassCard>
+          {/* ✅ Cerrar sesión - AHORA DENTRO DE SEGURIDAD */}
           <SettingsTile
             icon={<LogOut className="w-5 h-5 text-red-500" />}
             iconColor="bg-red-500/10"
             title="Cerrar sesión"
             subtitle="Salir de tu cuenta actual"
             onClick={() => setShowLogoutModal(true)}
+            danger={true}
           />
         </GlassCard>
 
@@ -1228,11 +1178,12 @@ const SettingsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Modal de cerrar sesión - NUEVO DISEÑO */}
+      {/* Modal de cerrar sesión - INCLUIDO DIRECTAMENTE */}
       <LogoutModal
         isOpen={showLogoutModal}
         onClose={() => setShowLogoutModal(false)}
         onConfirm={handleLogout}
+        isLoading={isLoggingOut}
       />
     </div>
   );
