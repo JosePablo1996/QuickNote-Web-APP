@@ -37,8 +37,56 @@ interface ExtendedNavigator extends Navigator {
 }
 
 /**
+ * Verificar si el Service Worker debe registrarse
+ * ✅ CORREGIDO: Respeta la flag de limpieza y solo registra en desarrollo
+ */
+const shouldRegisterServiceWorker = (): boolean => {
+  // Detectar si estamos en producción
+  const isProduction = window.location.hostname !== 'localhost' && 
+                       window.location.hostname !== '127.0.0.1' &&
+                       !window.location.hostname.includes('192.168');
+  
+  // Verificar si el SW fue deshabilitado por el script de limpieza
+  const isSWDisabled = sessionStorage.getItem('sw_disabled') === 'true' ||
+                       localStorage.getItem('sw_disabled_production') === 'true';
+  
+  // Verificar si es desarrollo
+  const isDevelopment = !isProduction;
+  
+  // Verificar si se forzó manualmente
+  const isForced = localStorage.getItem('register_sw') === 'true';
+  
+  // ✅ LÓGICA CORREGIDA:
+  // - En producción: NUNCA registrar SW (a menos que se fuerce manualmente)
+  // - En desarrollo: Registrar SW (para pruebas)
+  // - Si el SW fue deshabilitado por limpieza: NO registrar
+  
+  if (isSWDisabled) {
+    console.log('🔧 Service Worker deshabilitado por script de limpieza');
+    return false;
+  }
+  
+  if (isProduction && !isForced) {
+    console.log('🔧 Service Worker deshabilitado en producción');
+    return false;
+  }
+  
+  if (isDevelopment) {
+    console.log('🔧 Service Worker habilitado en desarrollo');
+    return true;
+  }
+  
+  if (isForced) {
+    console.log('🔧 Service Worker forzado manualmente');
+    return true;
+  }
+  
+  return false;
+};
+
+/**
  * Registrar Service Worker para PWA y modo offline
- * ✅ CORREGIDO: Solo se registra en desarrollo, NO en producción
+ * ✅ CORREGIDO: Solo se registra cuando debe
  */
 const registerServiceWorker = async (): Promise<void> => {
   // Verificar si el navegador soporta Service Workers
@@ -47,16 +95,8 @@ const registerServiceWorker = async (): Promise<void> => {
     return;
   }
 
-  // ✅ DETECTAR SI ESTAMOS EN PRODUCCIÓN
-  const isProduction = window.location.hostname !== 'localhost' && 
-                       window.location.hostname !== '127.0.0.1' &&
-                       !window.location.hostname.includes('192.168');
-  
-  // ✅ SOLO registrar en desarrollo (localhost) o si se fuerza manualmente
-  const shouldRegister = !isProduction || localStorage.getItem('register_sw') === 'true';
-
-  if (!shouldRegister) {
-    console.log('🔧 Service Worker deshabilitado en producción');
+  // Verificar si debe registrarse
+  if (!shouldRegisterServiceWorker()) {
     return;
   }
 
@@ -99,10 +139,16 @@ const registerServiceWorker = async (): Promise<void> => {
 
 /**
  * Configurar sincronización periódica en segundo plano
+ * ✅ CORREGIDO: Solo se ejecuta si hay SW registrado
  */
 const setupBackgroundSync = async (): Promise<void> => {
   if (!('serviceWorker' in navigator)) {
     console.log('⚠️ Service Worker no soportado');
+    return;
+  }
+
+  // Solo ejecutar si el SW está registrado
+  if (!shouldRegisterServiceWorker()) {
     return;
   }
 
@@ -173,8 +219,65 @@ const requestNotificationPermission = async (): Promise<void> => {
   }
 };
 
+/**
+ * Limpiar datos corruptos de localStorage
+ */
+const cleanupCorruptedData = (): void => {
+  try {
+    // Verificar token y usuario
+    const token = localStorage.getItem('auth_token');
+    const user = localStorage.getItem('user');
+    
+    // Si hay token pero no hay usuario, limpiar
+    if (token && !user) {
+      console.log('🧹 Limpiando token huérfano');
+      localStorage.removeItem('auth_token');
+    }
+    
+    // Si hay usuario pero no hay token, limpiar
+    if (user && !token) {
+      console.log('🧹 Limpiando usuario huérfano');
+      localStorage.removeItem('user');
+    }
+    
+    // Verificar datos de sesión corruptos
+    const sessionKeys = [
+      'temp_2fa_token',
+      'login_in_progress',
+      'temp_user_email',
+      'temp_user_name',
+      'temp_user_avatar',
+      '2fa_user_data'
+    ];
+    
+    // Limpiar datos de sesión antiguos (más de 1 hora)
+    for (const key of sessionKeys) {
+      const value = sessionStorage.getItem(key);
+      if (value) {
+        try {
+          const parsed = JSON.parse(value);
+          if (parsed && parsed.timestamp) {
+            const age = Date.now() - parsed.timestamp;
+            if (age > 3600000) { // 1 hora
+              sessionStorage.removeItem(key);
+              console.log(`🧹 Limpiado dato de sesión expirado: ${key}`);
+            }
+          }
+        } catch {
+          // Si no se puede parsear, mantener
+        }
+      }
+    }
+  } catch (error) {
+    console.warn('Error limpiando datos corruptos:', error);
+  }
+};
+
 // ✅ SIN React.StrictMode para evitar dobles renders en desarrollo
 // que causan bucles de peticiones al cargar notas
+
+// Limpiar datos corruptos antes de renderizar
+cleanupCorruptedData();
 
 // Renderizar la aplicación
 const root = ReactDOM.createRoot(document.getElementById('root')!);
@@ -207,11 +310,11 @@ if (typeof window !== 'undefined') {
   window.addEventListener('load', () => {
     console.log('🚀 QuickNote - Inicializando funcionalidades offline');
     
-    // Registrar Service Worker (solo en desarrollo)
+    // Registrar Service Worker (solo si debe)
     registerServiceWorker();
     
-    // Configurar background sync (solo si hay SW)
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    // Configurar background sync (solo si hay SW registrado)
+    if (shouldRegisterServiceWorker()) {
       setupBackgroundSync();
     }
     
@@ -231,8 +334,8 @@ interface ServiceWorkerMessage {
   timestamp?: number;
 }
 
-// Escuchar mensajes del Service Worker
-if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+// Escuchar mensajes del Service Worker (solo si hay SW)
+if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && shouldRegisterServiceWorker()) {
   navigator.serviceWorker.addEventListener('message', (event: MessageEvent<ServiceWorkerMessage>) => {
     console.log('📨 Mensaje del Service Worker:', event.data);
     

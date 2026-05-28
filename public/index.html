@@ -1,29 +1,150 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <link rel="manifest" href="/manifest.json" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#6366f1" />
-    <meta name="description" content="QuickNote - Aplicación de notas rápida, segura y sincronizada. Funciona sin conexión a internet." />
-    <meta name="keywords" content="notas, apuntes, productividad, offline, sincronización" />
+    <meta name="theme-color" content="#6366F1" />
+    <meta name="description" content="QuickNote - Aplicación moderna de notas con sincronización en la nube, autenticación biométrica y copias de seguridad automáticas." />
+    <meta name="keywords" content="notas, toma de notas, productividad, sincronización, backup, QuickNote" />
     <meta name="author" content="José Pablo Miranda Quintanilla" />
+    <meta name="color-scheme" content="light dark" />
+    
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="QuickNote" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="application-name" content="QuickNote" />
-    <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
-    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png" />
-    <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-167x167.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180x180.png" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32x32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16x16.png" />
+    
+    <!-- Iconos -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    
+    <!-- Preconexiones para mejorar rendimiento -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://hrrlcxxkboaamrzhntns.supabase.co" />
+    
+    <!-- Título dinámico (se actualizará con React) -->
     <title>QuickNote - Tus notas rápidas</title>
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- ============================================ -->
+    <!-- ✅ LIMPIEZA DE SERVICE WORKERS (CORREGIDO)   -->
+    <!-- ============================================ -->
+    <script>
+      (function() {
+        // Detectar si estamos en producción
+        const isProduction = window.location.hostname !== 'localhost' && 
+                              window.location.hostname !== '127.0.0.1' &&
+                              !window.location.hostname.includes('192.168');
+        
+        // Solo ejecutar limpieza en producción
+        if (isProduction) {
+          console.log('🧹 [Cleanup] Modo producción detectado - Limpiando Service Workers...');
+          
+          // 1. Desregistrar todos los Service Workers existentes
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+              if (registrations.length > 0) {
+                console.log(`🧹 [Cleanup] Encontrados ${registrations.length} Service Worker(s) para limpiar`);
+                for (let registration of registrations) {
+                  registration.unregister();
+                  console.log('   ✅ Service Worker desregistrado:', registration.scope);
+                }
+              } else {
+                console.log('🧹 [Cleanup] No se encontraron Service Workers activos');
+              }
+            }).catch(function(err) {
+              console.warn('⚠️ [Cleanup] Error al acceder a Service Workers:', err);
+            });
+          }
+          
+          // 2. Limpiar todas las cachés del navegador
+          if ('caches' in window) {
+            caches.keys().then(function(names) {
+              if (names.length > 0) {
+                console.log(`🧹 [Cleanup] Limpiando ${names.length} caché(s)...`);
+                for (let name of names) {
+                  caches.delete(name);
+                  console.log('   ✅ Cache eliminado:', name);
+                }
+              } else {
+                console.log('🧹 [Cleanup] No se encontraron cachés para limpiar');
+              }
+            }).catch(function(err) {
+              console.warn('⚠️ [Cleanup] Error al acceder a cachés:', err);
+            });
+          }
+          
+          // 3. Prevenir registro futuro de Service Workers
+          if ('serviceWorker' in navigator) {
+            // Guardar flag para que la app no intente registrar SW
+            sessionStorage.setItem('sw_disabled', 'true');
+            localStorage.setItem('sw_disabled_production', 'true');
+            console.log('🧹 [Cleanup] Service Workers deshabilitados para esta sesión');
+          }
+        } else {
+          console.log('🔧 [Cleanup] Modo desarrollo - No se limpiarán Service Workers');
+        }
+      })();
+    </script>
+    
+    <!-- ============================================ -->
+    <!-- ✅ SCRIPT PARA FORZAR RECARGA SI HAY ERROR  -->
+    <!-- ============================================ -->
+    <script>
+      (function() {
+        // Detectar errores de carga de módulos
+        window.addEventListener('error', function(e) {
+          // Si el error es relacionado con Service Worker o módulos
+          if (e.message && (e.message.includes('ServiceWorker') || 
+              e.message.includes('Failed to load module') ||
+              e.message.includes('manifest'))) {
+            console.warn('⚠️ Error detectado, intentando recuperar...', e.message);
+            
+            // Verificar si ya hemos intentado recuperar
+            if (!sessionStorage.getItem('recovery_attempted')) {
+              sessionStorage.setItem('recovery_attempted', 'true');
+              console.log('🔄 Intentando recuperar: recargando sin Service Workers...');
+              
+              // Forzar recarga sin caché
+              window.location.reload();
+            }
+          }
+        });
+      })();
+    </script>
+    
+    <!-- ============================================ -->
+    <!-- ✅ SCRIPT PARA RECUPERAR SESIÓN              -->
+    <!-- ============================================ -->
+    <script>
+      (function() {
+        // Verificar si hay una sesión activa y limpiar datos corruptos
+        try {
+          const token = localStorage.getItem('auth_token');
+          const user = localStorage.getItem('user');
+          
+          // Si hay token pero no hay usuario, limpiar
+          if (token && !user) {
+            console.log('🧹 Limpiando token huérfano');
+            localStorage.removeItem('auth_token');
+          }
+          
+          // Si hay usuario pero no hay token, limpiar
+          if (user && !token) {
+            console.log('🧹 Limpiando usuario huérfano');
+            localStorage.removeItem('user');
+          }
+        } catch (e) {
+          console.warn('Error verificando sesión:', e);
+        }
+      })();
+    </script>
   </body>
 </html>
