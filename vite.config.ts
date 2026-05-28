@@ -7,12 +7,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export default defineConfig(({ command, mode }) => {
-  // Detectar si es producción
   const isProduction = mode === 'production' || command === 'build';
   
   console.log(`🔧 Vite config - Modo: ${mode}, Producción: ${isProduction}`);
 
-  // Configuración base (común para desarrollo y producción)
   const baseConfig = {
     plugins: [react()],
     root: __dirname,
@@ -29,25 +27,24 @@ export default defineConfig(({ command, mode }) => {
       minify: false,
       rollupOptions: {
         input: {
-          main: path.resolve(__dirname, 'index.html'),
+          main: path.resolve(__dirname, 'index.html'), // ✅ Ahora apunta al archivo corregido
         },
         output: {
           manualChunks: undefined,
         },
       },
       chunkSizeWarningLimit: 2000,
+      copyPublicDir: true, // ✅ Asegurar que se copian assets de public/
     },
     define: {
       __APP_ENV__: JSON.stringify(mode),
     },
   };
 
-  // Si es producción, no agregar configuración de servidor
   if (isProduction) {
     return baseConfig;
   }
 
-  // En desarrollo, agregar configuración de servidor con proxy
   return {
     ...baseConfig,
     server: {
