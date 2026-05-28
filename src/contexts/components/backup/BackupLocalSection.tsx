@@ -24,6 +24,8 @@ import { useNotes } from '../../../hooks/useNotes';
 import { useToast } from '../../../hooks/useToast';
 import { backupService, BackupMetadata, BackupLimitInfo } from '../../../services/backup';
 import LoadingSpinner from '../ui/LoadingSpinner';
+import { RestoreOptionsModal } from './RestoreOptionsModal';
+import { applyRestoreMode, RestoreMode } from '../../../utils/backupUtils';
 
 interface BackupLocalSectionProps {
   onBackupChange?: () => void;
@@ -54,7 +56,13 @@ const BackupLocalSection: React.FC<BackupLocalSectionProps> = ({ onBackupChange 
   const [showDeleteModal, setShowDeleteModal] = useState<BackupMetadata | null>(null);
   const [showProgressModal, setShowProgressModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showRestoreSuccessModal, setShowRestoreSuccessModal] = useState(false);
+
+  // ✅ Estados para el modal de opciones de restauración
   const [showRestoreModal, setShowRestoreModal] = useState(false);
+  const [pendingRestoreBackup, setPendingRestoreBackup] = useState<BackupMetadata | null>(null);
+  const [pendingRestoreNotes, setPendingRestoreNotes] = useState<any[]>([]);
+  const [isLoadingBackupNotes, setIsLoadingBackupNotes] = useState(false);
 
   // Datos de modales
   const [modalNoteCount, setModalNoteCount] = useState(0);
@@ -195,8 +203,7 @@ const BackupLocalSection: React.FC<BackupLocalSectionProps> = ({ onBackupChange 
     }, 200);
 
     try {
-      // ✅ IMPORTANTE: syncToCloud = false para NO subir a la nube
-      // Los backups locales se quedan SOLO en local
+      // syncToCloud = false para NO subir a la nube
       const backup = await backupService.createBackup(notes, true, false);
 
       clearInterval(interval);
@@ -228,22 +235,36 @@ const BackupLocalSection: React.FC<BackupLocalSectionProps> = ({ onBackupChange 
     }
   };
 
+  // ✅ MODIFICADO: Función para cargar notas del backup antes de mostrar el modal
   const handleRestoreBackup = async (backup: BackupMetadata) => {
-    if (!window.confirm(
-      `¿Restaurar backup local?\n\n` +
-      `📁 Archivo: ${backup.file_name}\n` +
-      `📅 Fecha: ${formatDate(backup.created_at)}\n` +
-      `📝 Notas: ${backup.note_count}\n\n` +
-      `⚠️ Las notas actuales (${notes.length}) serán reemplazadas.`
-    )) {
-      return;
+    setIsLoadingBackupNotes(true);
+    setPendingRestoreBackup(backup);
+    
+    try {
+      console.log(`📥 Cargando notas del backup local ${backup.file_name}...`);
+      const restoredNotes = await backupService.restoreBackup(backup.id);
+      setPendingRestoreNotes(restoredNotes);
+      setShowRestoreModal(true);
+      console.log(`✅ ${restoredNotes.length} notas cargadas del backup local`);
+    } catch (error: any) {
+      console.error('Error cargando notas del backup local:', error);
+      showError(error.message || 'Error al cargar las notas del backup');
+      setPendingRestoreBackup(null);
+    } finally {
+      setIsLoadingBackupNotes(false);
     }
+  };
 
-    setIsRestoring(backup.id);
+  // ✅ NUEVA FUNCIÓN: Confirmar restauración con modo seleccionado
+  const handleConfirmRestore = async (mode: RestoreMode) => {
+    if (!pendingRestoreBackup) return;
+
+    setShowRestoreModal(false);
+    setIsRestoring(pendingRestoreBackup.id);
     setShowProgressModal(true);
-    setProgressText("Restaurando desde local...");
+    setProgressText("Restaurando...");
     setBackupProgress(0);
-    setModalTotalCount(backup.note_count);
+    setModalTotalCount(pendingRestoreNotes.length);
 
     const interval = setInterval(() => {
       setBackupProgress(prev => {
@@ -253,18 +274,29 @@ const BackupLocalSection: React.FC<BackupLocalSectionProps> = ({ onBackupChange 
     }, 200);
 
     try {
-      const restoredNotes = await backupService.restoreBackup(backup.id);
-      await replaceAllNotes(restoredNotes);
+      // ✅ APLICAR EL MODO DE RESTAURACIÓN SELECCIONADO
+      const mergedNotes = applyRestoreMode(notes, pendingRestoreNotes, mode, (current, total) => {
+        const progressPercent = (current / total) * 100;
+        setBackupProgress(Math.min(progressPercent, 90));
+      });
+      
+      console.log(`📝 Restaurando con modo: ${mode}`);
+      console.log(`   Notas originales: ${notes.length}`);
+      console.log(`   Notas del backup: ${pendingRestoreNotes.length}`);
+      console.log(`   Notas resultantes: ${mergedNotes.length}`);
+      
+      await replaceAllNotes(mergedNotes);
 
       clearInterval(interval);
       setBackupProgress(100);
 
       setShowProgressModal(false);
-      setModalImportedCount(restoredNotes.length);
-      setModalTotalCount(backup.note_count);
-      setShowRestoreModal(true);
+      setModalImportedCount(mergedNotes.length);
+      setModalTotalCount(pendingRestoreNotes.length);
+      setShowRestoreSuccessModal(true);
 
-      success(`✅ ${restoredNotes.length} notas restauradas desde backup local`);
+      const modeText = mode === 'replace' ? 'Reemplazar' : mode === 'merge' ? 'Fusionar' : 'Solo agregar nuevas';
+      success(`✅ ${mergedNotes.length} notas restauradas (modo: ${modeText})`);
       await loadLocalBackups();
     } catch (error) {
       clearInterval(interval);
@@ -272,6 +304,8 @@ const BackupLocalSection: React.FC<BackupLocalSectionProps> = ({ onBackupChange 
       showError("Error al restaurar backup local");
     } finally {
       setIsRestoring(null);
+      setPendingRestoreBackup(null);
+      setPendingRestoreNotes([]);
     }
   };
 
@@ -521,11 +555,17 @@ const BackupLocalSection: React.FC<BackupLocalSectionProps> = ({ onBackupChange 
                   <div className="flex gap-1 flex-shrink-0">
                     <button
                       onClick={() => handleRestoreBackup(backup)}
-                      disabled={isRestoring === backup.id}
+                      disabled={isRestoring === backup.id || isLoadingBackupNotes}
                       className="p-1.5 bg-emerald-500/10 text-emerald-500 rounded-lg hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
                       title="Restaurar"
                     >
-                      {isRestoring === backup.id ? <LoadingSpinner size="sm" /> : <RotateCcw className="w-3.5 h-3.5" />}
+                      {isRestoring === backup.id ? (
+                        <LoadingSpinner size="sm" />
+                      ) : isLoadingBackupNotes && pendingRestoreBackup?.id === backup.id ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <RotateCcw className="w-3.5 h-3.5" />
+                      )}
                     </button>
                     <button
                       onClick={() => handleDownloadBackup(backup)}
@@ -563,7 +603,27 @@ const BackupLocalSection: React.FC<BackupLocalSectionProps> = ({ onBackupChange 
       </div>
 
       {/* ============================================ */}
-      {/* MODALES */}
+      {/* MODAL DE OPCIONES DE RESTAURACIÓN (NUEVO) */}
+      {/* ============================================ */}
+      <RestoreOptionsModal
+        isOpen={showRestoreModal}
+        onClose={() => {
+          setShowRestoreModal(false);
+          setPendingRestoreBackup(null);
+          setPendingRestoreNotes([]);
+        }}
+        onConfirm={handleConfirmRestore}
+        existingNotes={notes}
+        backupNotes={pendingRestoreNotes}
+        backupName={pendingRestoreBackup?.file_name || ''}
+        backupDate={pendingRestoreBackup ? formatDate(pendingRestoreBackup.created_at) : ''}
+        backupNoteCount={pendingRestoreBackup?.note_count || 0}
+        isRestoring={isRestoring === pendingRestoreBackup?.id}
+        source="local"
+      />
+
+      {/* ============================================ */}
+      {/* MODALES EXISTENTES */}
       {/* ============================================ */}
 
       {/* Modal de Progreso */}
@@ -635,7 +695,7 @@ const BackupLocalSection: React.FC<BackupLocalSectionProps> = ({ onBackupChange 
 
       {/* Modal de Éxito - Restauración */}
       <AnimatePresence>
-        {showRestoreModal && (
+        {showRestoreSuccessModal && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -675,7 +735,7 @@ const BackupLocalSection: React.FC<BackupLocalSectionProps> = ({ onBackupChange 
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => setShowRestoreModal(false)}
+                onClick={() => setShowRestoreSuccessModal(false)}
                 className="w-full py-2 text-sm rounded-lg font-semibold bg-gradient-to-r from-green-400 to-blue-500 text-white"
               >
                 Aceptar

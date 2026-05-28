@@ -1,5 +1,5 @@
 // src/contexts/components/backup/CloudBackupSection.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '../../../hooks/useTheme';
 import { useNotes } from '../../../hooks/useNotes';
 import { useAuth } from '../../../hooks/useAuth';
@@ -21,6 +21,8 @@ import {
 } from 'lucide-react';
 import { Note } from '../../../models/Note';
 import { openSelectiveBackupModal } from '../../../hooks/useSelectiveBackup';
+import { RestoreOptionsModal } from './RestoreOptionsModal';
+import { applyRestoreMode, RestoreMode } from '../../../utils/backupUtils';
 
 // Constantes para valores por defecto
 const DEFAULT_COLOR = '#3B82F6';
@@ -101,6 +103,32 @@ const mapToNoteModel = (backupNote: any): Note => {
   };
 };
 
+// ✅ Función para formatear fecha
+const formatDate = (dateStr: string): string => {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffTime = Math.abs(now.getTime() - date.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays === 0) {
+    return `Hoy, ${date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`;
+  }
+  if (diffDays === 1) return 'Ayer';
+  if (diffDays < 7) return `Hace ${diffDays} días`;
+  return date.toLocaleDateString('es-ES', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+};
+
+// ✅ Función para formatear tamaño de archivo
+const formatFileSize = (bytes: number): string => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
 const CloudBackupSection: React.FC = () => {
   const { isDarkMode } = useTheme();
   const { notes, replaceAllNotes } = useNotes();
@@ -117,6 +145,13 @@ const CloudBackupSection: React.FC = () => {
   const [showCloudProgress, setShowCloudProgress] = useState(false);
   const [showCloudSuccess, setShowCloudSuccess] = useState(false);
   const [cloudSuccessMessage, setCloudSuccessMessage] = useState('');
+
+  // ✅ Estados para el modal de opciones de restauración
+  const [showRestoreModal, setShowRestoreModal] = useState(false);
+  const [pendingRestoreBackup, setPendingRestoreBackup] = useState<CloudBackupMetadata | null>(null);
+  const [pendingRestoreNotes, setPendingRestoreNotes] = useState<Note[]>([]);
+  const [isLoadingBackupNotes, setIsLoadingBackupNotes] = useState(false);
+  const [restoreMode, setRestoreMode] = useState<RestoreMode>('merge');
 
   // Calcular backups restantes
   const remainingBackups = MAX_BACKUPS - cloudBackups.length;
@@ -187,16 +222,35 @@ const CloudBackupSection: React.FC = () => {
     }
   };
 
-  // ✅ MODIFICADO: Restauración con manejo de diferentes estructuras de datos
-  const handleRestoreCloud = async (backupId: string) => {
-    const backup = cloudBackups.find(b => b.id === backupId);
-    if (!backup) return;
-
-    if (!window.confirm(`¿Restaurar backup de la nube?\n\nFecha: ${formatDate(backup.created_at)}\nNotas: ${backup.note_count}\n\nLas notas actuales serán reemplazadas.`)) {
-      return;
+  // ✅ Función para cargar las notas del backup antes de mostrar el modal
+  const handleRestoreCloud = async (backup: CloudBackupMetadata) => {
+    setIsLoadingBackupNotes(true);
+    setPendingRestoreBackup(backup);
+    
+    try {
+      console.log(`📥 Cargando notas del backup ${backup.file_name}...`);
+      const restoredData = await backupService.restoreCloudBackup(backup.id);
+      const restoredNotesArray = extractNotesFromBackupData(restoredData);
+      const mappedNotes = restoredNotesArray.map(mapToNoteModel);
+      setPendingRestoreNotes(mappedNotes);
+      setShowRestoreModal(true);
+      console.log(`✅ ${mappedNotes.length} notas cargadas del backup`);
+    } catch (error: any) {
+      console.error('Error cargando notas del backup:', error);
+      showError(error.message || 'Error al cargar las notas del backup');
+      setPendingRestoreBackup(null);
+    } finally {
+      setIsLoadingBackupNotes(false);
     }
+  };
 
-    setIsRestoringCloud(backupId);
+  // ✅ Función para confirmar la restauración con el modo seleccionado
+  const handleConfirmRestore = async (mode: RestoreMode) => {
+    if (!pendingRestoreBackup) return;
+
+    setShowRestoreModal(false);
+    setRestoreMode(mode);
+    setIsRestoringCloud(pendingRestoreBackup.id);
     setShowCloudProgress(true);
     setCloudProgress(0);
 
@@ -208,47 +262,32 @@ const CloudBackupSection: React.FC = () => {
     }, 200);
 
     try {
-      const restoredData = await backupService.restoreCloudBackup(backupId);
+      // ✅ APLICAR EL MODO DE RESTAURACIÓN SELECCIONADO
+      const mergedNotes = applyRestoreMode(notes, pendingRestoreNotes, mode, (current, total) => {
+        const progressPercent = (current / total) * 100;
+        setCloudProgress(Math.min(progressPercent, 90));
+      });
+      
+      console.log(`📝 Restaurando con modo: ${mode}`);
+      console.log(`   Notas originales: ${notes.length}`);
+      console.log(`   Notas del backup: ${pendingRestoreNotes.length}`);
+      console.log(`   Notas resultantes: ${mergedNotes.length}`);
       
       clearInterval(interval);
       setCloudProgress(100);
+
+      setTimeout(() => {
+        setShowCloudProgress(false);
+        const modeText = mode === 'replace' ? 'Reemplazar' : mode === 'merge' ? 'Fusionar' : 'Solo agregar nuevas';
+        setCloudSuccessMessage(`✅ ${mergedNotes.length} notas restauradas (modo: ${modeText})`);
+        setShowCloudSuccess(true);
+      }, 500);
       
-      // ✅ Extraer notas de la estructura de datos recibida
-      let restoredNotesArray = extractNotesFromBackupData(restoredData);
-      
-      if (restoredNotesArray && restoredNotesArray.length > 0) {
-        // Mapear cada nota preservando todos los campos de personalización
-        const notesToRestore: Note[] = restoredNotesArray.map(mapToNoteModel);
-        
-        console.log('📝 Notas restauradas con personalización:', notesToRestore.map(n => ({
-          title: n.title,
-          shape: n.shape,
-          icon: n.icon,
-          size: n.size,
-          colorIntensity: n.colorIntensity
-        })));
-        
-        setTimeout(() => {
-          setShowCloudProgress(false);
-          setCloudSuccessMessage(`✅ ${notesToRestore.length} notas restauradas desde la nube`);
-          setShowCloudSuccess(true);
-        }, 500);
-        
-        if (replaceAllNotes) {
-          await replaceAllNotes(notesToRestore);
-        }
-        
-        success(`✅ ${notesToRestore.length} notas restauradas desde la nube`);
-      } else {
-        console.error('No se pudieron extraer notas del backup:', restoredData);
-        setTimeout(() => {
-          setShowCloudProgress(false);
-          setCloudSuccessMessage(`⚠️ No se encontraron notas en el backup`);
-          setShowCloudSuccess(true);
-        }, 500);
-        showError('El backup no contiene notas válidas');
+      if (replaceAllNotes) {
+        await replaceAllNotes(mergedNotes);
       }
       
+      success(`✅ ${mergedNotes.length} notas restauradas (modo: ${mode === 'replace' ? 'Reemplazar' : mode === 'merge' ? 'Fusionar' : 'Solo agregar nuevas'})`);
       await loadCloudBackups();
     } catch (error: any) {
       clearInterval(interval);
@@ -257,6 +296,8 @@ const CloudBackupSection: React.FC = () => {
       showError(error.message || 'Error al restaurar desde la nube');
     } finally {
       setIsRestoringCloud(null);
+      setPendingRestoreBackup(null);
+      setPendingRestoreNotes([]);
     }
   };
 
@@ -290,30 +331,6 @@ const CloudBackupSection: React.FC = () => {
       return;
     }
     openSelectiveBackupModal(notes);
-  };
-
-  const formatDate = (dateStr: string): string => {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) {
-      return `Hoy, ${date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`;
-    }
-    if (diffDays === 1) return 'Ayer';
-    if (diffDays < 7) return `Hace ${diffDays} días`;
-    return date.toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
-  };
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   return (
@@ -455,13 +472,15 @@ const CloudBackupSection: React.FC = () => {
                   </div>
                   <div className="flex gap-1.5 flex-shrink-0">
                     <button
-                      onClick={() => handleRestoreCloud(backup.id)}
-                      disabled={isRestoringCloud === backup.id}
+                      onClick={() => handleRestoreCloud(backup)}
+                      disabled={isRestoringCloud === backup.id || isLoadingBackupNotes}
                       className="p-2 bg-green-500/10 text-green-400 rounded-lg hover:bg-green-500/20 transition-colors disabled:opacity-50"
                       title="Restaurar desde la nube (preserva personalización)"
                     >
                       {isRestoringCloud === backup.id ? (
                         <LoadingSpinner size="sm" />
+                      ) : isLoadingBackupNotes && pendingRestoreBackup?.id === backup.id ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                       ) : (
                         <CloudDownload className="w-3.5 h-3.5" />
                       )}
@@ -524,6 +543,26 @@ const CloudBackupSection: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* ============================================ */}
+      {/* MODAL DE OPCIONES DE RESTAURACIÓN (NUEVO) */}
+      {/* ============================================ */}
+      <RestoreOptionsModal
+        isOpen={showRestoreModal}
+        onClose={() => {
+          setShowRestoreModal(false);
+          setPendingRestoreBackup(null);
+          setPendingRestoreNotes([]);
+        }}
+        onConfirm={handleConfirmRestore}
+        existingNotes={notes}
+        backupNotes={pendingRestoreNotes}
+        backupName={pendingRestoreBackup?.file_name || ''}
+        backupDate={pendingRestoreBackup ? formatDate(pendingRestoreBackup.created_at) : ''}
+        backupNoteCount={pendingRestoreBackup?.note_count || 0}
+        isRestoring={isRestoringCloud === pendingRestoreBackup?.id}
+        source="cloud"
+      />
 
       {/* Modal de progreso */}
       <AnimatePresence>

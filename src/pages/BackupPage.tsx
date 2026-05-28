@@ -6,6 +6,7 @@ import { useNotes } from "../hooks/useNotes";
 import { useAuth } from "../hooks/useAuth";
 import { useToast } from "../hooks/useToast";
 import { backupService, BackupMetadata } from "../services/backup";
+import { api, CloudBackupMetadata } from "../services/api";
 import LoadingSpinner from "../contexts/components/ui/LoadingSpinner";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -39,8 +40,35 @@ interface BackupHistoryEntry {
 }
 
 // ============================================
-// COMPONENTE DE PESTAÑAS (MOVIDO DENTRO DEL COMPONENTE PRINCIPAL)
+// COMPONENTE DE PESTAÑAS (CENTRADO CON CONTADORES)
 // ============================================
+
+const TabButton: React.FC<{
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+  count?: number;
+}> = ({ active, onClick, icon, label, count }) => (
+  <button
+    onClick={onClick}
+    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all ${
+      active
+        ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
+        : 'bg-white/60 dark:bg-gray-800/60 text-gray-600 dark:text-gray-400 hover:bg-white/80 dark:hover:bg-gray-700/60 hover:text-gray-900 dark:hover:text-gray-200'
+    }`}
+  >
+    {icon}
+    <span className="hidden sm:inline">{label}</span>
+    {count !== undefined && count > 0 && (
+      <span className={`ml-1 px-1.5 py-0.5 text-xs rounded-full ${
+        active ? 'bg-white/20 text-white' : 'bg-gray-500/20 text-gray-500'
+      }`}>
+        {count}
+      </span>
+    )}
+  </button>
+);
 
 // ============================================
 // COMPONENTE PRINCIPAL
@@ -66,6 +94,10 @@ const BackupPage: React.FC = () => {
     needsBackup: false,
   });
   const [totalBackupSize, setTotalBackupSize] = useState(0);
+  
+  // ✅ NUEVO: Estado para backups en la nube (contador)
+  const [cloudBackups, setCloudBackups] = useState<CloudBackupMetadata[]>([]);
+  const [isLoadingCloud, setIsLoadingCloud] = useState(false);
 
   // Historial de backups (localStorage)
   const [backupHistory, setBackupHistory] = useState<BackupHistoryEntry[]>(() => {
@@ -96,6 +128,19 @@ const BackupPage: React.FC = () => {
     }
   };
 
+  // ✅ NUEVO: Cargar backups de la nube para el contador
+  const loadCloudBackups = async () => {
+    try {
+      setIsLoadingCloud(true);
+      const cloudData = await api.getCloudBackups();
+      setCloudBackups(cloudData);
+    } catch (error) {
+      console.error("Error cargando backups de la nube:", error);
+    } finally {
+      setIsLoadingCloud(false);
+    }
+  };
+
   const loadStats = useCallback(async () => {
     try {
       const stats = await backupService.getBackupStats(notes);
@@ -111,6 +156,7 @@ const BackupPage: React.FC = () => {
 
   useEffect(() => {
     loadBackups();
+    loadCloudBackups(); // ✅ Cargar backups de la nube
   }, []);
 
   useEffect(() => {
@@ -137,41 +183,11 @@ const BackupPage: React.FC = () => {
     success("Contador restablecido");
   };
 
-  // ============================================
-  // COMPONENTE DE PESTAÑA (DEFINIDO DENTRO DEL COMPONENTE PRINCIPAL)
-  // ============================================
-  
-  const TabButton: React.FC<{
-    active: boolean;
-    onClick: () => void;
-    icon: React.ReactNode;
-    label: string;
-    count?: number;
-  }> = ({ active, onClick, icon, label, count }) => (
-    <button
-      onClick={onClick}
-      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all ${
-        active
-          ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
-          : isDarkMode
-            ? 'bg-gray-800/60 text-gray-400 hover:bg-gray-700/60 hover:text-gray-200'
-            : 'bg-white/60 text-gray-600 hover:bg-white/80 hover:text-gray-900'
-      }`}
-    >
-      {icon}
-      <span className="hidden sm:inline">{label}</span>
-      {count !== undefined && count > 0 && (
-        <span className={`ml-1 px-1.5 py-0.5 text-xs rounded-full ${
-          active ? 'bg-white/20 text-white' : 'bg-gray-500/20 text-gray-500'
-        }`}>
-          {count}
-        </span>
-      )}
-    </button>
-  );
-
   // Obtener conteo de backups locales
   const localBackupsCount = backups.filter(b => b.source === 'local' || !b.source).length;
+  
+  // ✅ Obtener conteo de backups en la nube
+  const cloudBackupsCount = cloudBackups.length;
 
   // ============================================
   // RENDER
@@ -253,27 +269,30 @@ const BackupPage: React.FC = () => {
       {/* CONTENIDO PRINCIPAL */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         
-        {/* PESTAÑAS */}
-        <div className="flex flex-wrap gap-2 mb-6 border-b border-gray-200 dark:border-gray-700 pb-3">
-          <TabButton
-            active={activeTab === 'overview'}
-            onClick={() => setActiveTab('overview')}
-            icon={<BarChart3 className="w-4 h-4" />}
-            label="Resumen General"
-          />
-          <TabButton
-            active={activeTab === 'local'}
-            onClick={() => setActiveTab('local')}
-            icon={<Database className="w-4 h-4" />}
-            label="Respaldos Locales"
-            count={localBackupsCount}
-          />
-          <TabButton
-            active={activeTab === 'cloud'}
-            onClick={() => setActiveTab('cloud')}
-            icon={<Cloud className="w-4 h-4" />}
-            label="Respaldos en la Nube"
-          />
+        {/* ✅ PESTAÑAS CENTRADAS CON CONTADORES */}
+        <div className="flex justify-center mb-6">
+          <div className="flex flex-wrap gap-2 p-1 bg-gray-100/50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
+            <TabButton
+              active={activeTab === 'overview'}
+              onClick={() => setActiveTab('overview')}
+              icon={<BarChart3 className="w-4 h-4" />}
+              label="Resumen General"
+            />
+            <TabButton
+              active={activeTab === 'local'}
+              onClick={() => setActiveTab('local')}
+              icon={<Database className="w-4 h-4" />}
+              label="Respaldos Locales"
+              count={localBackupsCount}
+            />
+            <TabButton
+              active={activeTab === 'cloud'}
+              onClick={() => setActiveTab('cloud')}
+              icon={<Cloud className="w-4 h-4" />}
+              label="Respaldos en la Nube"
+              count={cloudBackupsCount} // ✅ AHORA MUESTRA EL CONTADOR
+            />
+          </div>
         </div>
 
         {/* CONTENIDO SEGÚN PESTAÑA */}
