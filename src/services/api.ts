@@ -3,10 +3,8 @@ import { Note, NoteCreate, NoteUpdate } from '../models/Note';
 import { compressData, decompressData } from '../utils/compression';
 
 // ============================================
-// ✅ URL DE LA API - CONFIGURADA PARA PRODUCCIÓN
+// ✅ URL DE LA API - CORREGIDA PARA USAR VARIABLE DE ENTORNO
 // ============================================
-// Hardcodeada temporalmente para pruebas en Render
-const API_URL = 'https://quicknote-api-app-react.onrender.com';
 
 // Detectar si estamos en desarrollo
 const isDevelopment = (): boolean => {
@@ -17,7 +15,27 @@ const isDevelopment = (): boolean => {
   return false;
 };
 
-// Helper for conditional logging
+// Obtener URL base de la API (sin /api/v1)
+const getApiBaseUrl = (): string => {
+  // En desarrollo: usar ruta VACÍA para que Vite use el proxy
+  if (isDevelopment()) {
+    console.log('🔧 Desarrollo: usando proxy de Vite (ruta relativa)');
+    return '';  // 👈 IMPORTANTE: vacío, el proxy intercepta las rutas
+  }
+  
+  // En producción: usar variable de entorno
+  const url = import.meta.env.VITE_API_URL;
+  if (!url) {
+    console.warn('⚠️ VITE_API_URL no definida, usando URL por defecto');
+    return 'https://quicknote-api-app-react.onrender.com';
+  }
+  // Eliminar /api/v1 del final si existe (por si acaso)
+  const cleanUrl = url.replace(/\/api\/v1\/?$/, '');
+  console.log('🔧 Producción: usando URL base', cleanUrl);
+  return cleanUrl;
+};
+
+// Helper para logging condicional
 const log = {
   info: (...args: any[]) => {
     if (isDevelopment()) {
@@ -123,15 +141,13 @@ class ApiService {
   private baseUrl: string;
 
   constructor() {
-    // ✅ AHORA USA LA URL HARCODEADA
-    this.baseUrl = API_URL;
+    this.baseUrl = getApiBaseUrl();
     
     console.log('%c🔧================================', 'color: #00ff00; font-weight: bold');
     console.log('%c🌐 API Service inicializado', 'color: #00ff00; font-weight: bold');
     console.log('%c🔧================================', 'color: #00ff00; font-weight: bold');
-    console.log('📌 URL Base:', this.baseUrl);
+    console.log('📌 URL Base:', this.baseUrl === '' ? '(proxy de Vite)' : this.baseUrl);
     console.log('🔧 Modo:', isDevelopment() ? '✅ DESARROLLO' : '🚀 PRODUCCIÓN');
-    console.log('🔧 API URL:', API_URL);
     console.log('%c🔧================================\n', 'color: #00ff00; font-weight: bold');
   }
 
@@ -165,6 +181,31 @@ class ApiService {
     } catch {
       return null;
     }
+  }
+
+  // ============== MÉTODO PARA CONSTRUIR URLs ==============
+  
+  /**
+   * Construye una URL completa para la API
+   * En desarrollo: usa ruta relativa (el proxy de Vite intercepta)
+   * En producción: usa la URL base + la ruta
+   */
+  private buildUrl(path: string): string {
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+    
+    if (this.baseUrl === '') {
+      // En desarrollo: usar ruta relativa (el proxy la intercepta)
+      if (isDevelopment()) {
+        console.log(`🔧 Proxy: usando ruta relativa ${normalizedPath}`);
+      }
+      return normalizedPath;
+    }
+    
+    const fullUrl = `${this.baseUrl}${normalizedPath}`;
+    if (isDevelopment()) {
+      console.log(`🔧 Directo: ${fullUrl}`);
+    }
+    return fullUrl;
   }
 
   // ============================================
@@ -204,7 +245,7 @@ class ApiService {
         }
       };
 
-      const url = `${this.baseUrl}/api/v1/backup/cloud`;
+      const url = this.buildUrl('/api/v1/backup/cloud');
       const headers = this.getAuthHeaders();
       
       const response = await fetch(url, {
@@ -248,7 +289,7 @@ class ApiService {
         return [];
       }
 
-      const url = `${this.baseUrl}/api/v1/backup/cloud`;
+      const url = this.buildUrl('/api/v1/backup/cloud');
       const headers = this.getAuthHeaders();
       
       const response = await fetch(url, {
@@ -288,7 +329,7 @@ class ApiService {
         throw new Error('No autenticado');
       }
 
-      const url = `${this.baseUrl}/api/v1/backup/cloud/${backupId}`;
+      const url = this.buildUrl(`/api/v1/backup/cloud/${backupId}`);
       const headers = this.getAuthHeaders();
       
       const response = await fetch(url, {
@@ -356,7 +397,7 @@ class ApiService {
         return false;
       }
 
-      const url = `${this.baseUrl}/api/v1/backup/cloud/${backupId}`;
+      const url = this.buildUrl(`/api/v1/backup/cloud/${backupId}`);
       const headers = this.getAuthHeaders();
       
       const response = await fetch(url, {
@@ -389,7 +430,7 @@ class ApiService {
       const token = this.getAuthToken();
       if (!token) return null;
 
-      const url = `${this.baseUrl}/api/v1/backup/cloud/limit/info`;
+      const url = this.buildUrl('/api/v1/backup/cloud/limit/info');
       const headers = this.getAuthHeaders();
       
       const response = await fetch(url, {
@@ -414,7 +455,7 @@ class ApiService {
     console.log('🔐 [API] POST /auth/2fa/enable');
     
     try {
-      const url = `${this.baseUrl}/api/v1/auth/2fa/enable`;
+      const url = this.buildUrl('/api/v1/auth/2fa/enable');
       const headers = this.getAuthHeaders();
       const response = await fetch(url, {
         method: 'POST',
@@ -439,7 +480,7 @@ class ApiService {
     console.log('🔐 [API] POST /auth/2fa/verify-enable');
     
     try {
-      const url = `${this.baseUrl}/api/v1/auth/2fa/verify-enable`;
+      const url = this.buildUrl('/api/v1/auth/2fa/verify-enable');
       const headers = this.getAuthHeaders();
       const response = await fetch(url, {
         method: 'POST',
@@ -465,7 +506,7 @@ class ApiService {
     console.log('🔐 [API] POST /auth/2fa/verify-login');
     
     try {
-      const url = `${this.baseUrl}/api/v1/auth/2fa/verify-login`;
+      const url = this.buildUrl('/api/v1/auth/2fa/verify-login');
       
       const response = await fetch(url, {
         method: 'POST',
@@ -502,7 +543,7 @@ class ApiService {
     console.log('🔐 [API] POST /auth/2fa/verify-backup');
     
     try {
-      const url = `${this.baseUrl}/api/v1/auth/2fa/verify-backup`;
+      const url = this.buildUrl('/api/v1/auth/2fa/verify-backup');
       
       const response = await fetch(url, {
         method: 'POST',
@@ -539,7 +580,7 @@ class ApiService {
     console.log('🔐 [API] POST /auth/2fa/disable');
     
     try {
-      const url = `${this.baseUrl}/api/v1/auth/2fa/disable`;
+      const url = this.buildUrl('/api/v1/auth/2fa/disable');
       const headers = this.getAuthHeaders();
       const response = await fetch(url, {
         method: 'POST',
@@ -564,7 +605,7 @@ class ApiService {
     console.log('🔐 [API] GET /auth/2fa/status');
     
     try {
-      const url = `${this.baseUrl}/api/v1/auth/2fa/status`;
+      const url = this.buildUrl('/api/v1/auth/2fa/status');
       const headers = this.getAuthHeaders();
       const response = await fetch(url, {
         method: 'GET',
@@ -597,7 +638,7 @@ class ApiService {
         return [];
       }
 
-      const url = `${this.baseUrl}/api/v1/passkeys/list/${userId}`;
+      const url = this.buildUrl(`/api/v1/passkeys/list/${userId}`);
       const headers = this.getAuthHeaders();
       
       const response = await fetch(url, {
@@ -623,7 +664,7 @@ class ApiService {
     console.log('🔐 [API] POST /passkeys/register/start');
     
     try {
-      const url = `${this.baseUrl}/api/v1/passkeys/register/start`;
+      const url = this.buildUrl('/api/v1/passkeys/register/start');
       const response = await fetch(url, {
         method: 'POST',
         headers: this.getAuthHeaders(),
@@ -652,7 +693,7 @@ class ApiService {
     console.log('🔐 [API] POST /passkeys/register/complete');
     
     try {
-      const url = `${this.baseUrl}/api/v1/passkeys/register/complete`;
+      const url = this.buildUrl('/api/v1/passkeys/register/complete');
       const response = await fetch(url, {
         method: 'POST',
         headers: this.getAuthHeaders(),
@@ -680,7 +721,7 @@ class ApiService {
     console.log('🗑️ [API] DELETE /passkeys');
     
     try {
-      const url = `${this.baseUrl}/api/v1/passkeys/${credentialId}?user_id=${userId}`;
+      const url = this.buildUrl(`/api/v1/passkeys/${credentialId}?user_id=${userId}`);
       const headers = this.getAuthHeaders();
       
       const response = await fetch(url, {
@@ -707,7 +748,7 @@ class ApiService {
     console.log('🔐 [API] POST /passkeys/login/start');
     
     try {
-      const url = `${this.baseUrl}/api/v1/passkeys/login/start`;
+      const url = this.buildUrl('/api/v1/passkeys/login/start');
       const response = await fetch(url, {
         method: 'POST',
         headers: this.getAuthHeaders(),
@@ -732,7 +773,7 @@ class ApiService {
     console.log('🔐 [API] POST /passkeys/login/complete');
     
     try {
-      const url = `${this.baseUrl}/api/v1/passkeys/login/complete`;
+      const url = this.buildUrl('/api/v1/passkeys/login/complete');
       const response = await fetch(url, {
         method: 'POST',
         headers: this.getAuthHeaders(),
@@ -769,7 +810,7 @@ class ApiService {
         return [];
       }
 
-      const url = `${this.baseUrl}/api/v1/notes/?deleted=${deleted}`;
+      const url = this.buildUrl(`/api/v1/notes/?deleted=${deleted}`);
       const headers = this.getAuthHeaders();
       
       const response = await fetch(url, {
@@ -799,7 +840,7 @@ class ApiService {
         return null;
       }
 
-      const url = `${this.baseUrl}/api/v1/notes/${id}`;
+      const url = this.buildUrl(`/api/v1/notes/${id}`);
       const headers = this.getAuthHeaders();
       
       const response = await fetch(url, {
@@ -841,7 +882,7 @@ class ApiService {
         return null;
       }
       
-      const url = `${this.baseUrl}/api/v1/notes/`;
+      const url = this.buildUrl('/api/v1/notes/');
       const headers = this.getAuthHeaders();
       
       const response = await fetch(url, {
@@ -886,7 +927,7 @@ class ApiService {
       }
       if (note.deleted_at !== undefined) noteToSend.deleted_at = note.deleted_at;
 
-      const url = `${this.baseUrl}/api/v1/notes/${id}`;
+      const url = this.buildUrl(`/api/v1/notes/${id}`);
       const headers = this.getAuthHeaders();
       
       const response = await fetch(url, {
@@ -912,7 +953,7 @@ class ApiService {
     console.log(`🗑️ [API] DELETE /notes/${id}`);
     
     try {
-      const url = `${this.baseUrl}/api/v1/notes/${id}`;
+      const url = this.buildUrl(`/api/v1/notes/${id}`);
       const headers = this.getAuthHeaders();
       
       const response = await fetch(url, {
