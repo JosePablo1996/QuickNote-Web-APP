@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../hooks/useTheme';
 import { useNotes } from '../hooks/useNotes';
+import { useOfflineNotes } from '../hooks/useOfflineNotes';
 import { SortOption, sortOptions } from '../utils/sortUtils';
 import Header from '../contexts/components/layout/Header';
 import LeftMenu from '../contexts/components/layout/LeftMenu';
@@ -11,6 +12,7 @@ import NoteCard from '../contexts/components/notes/NoteCard';
 import EmptyState from '../contexts/components/ui/EmptyState';
 import LoadingSpinner from '../contexts/components/ui/LoadingSpinner';
 import ViewToggle from '../contexts/components/ui/ViewToggle';
+import OfflineIndicator from '../contexts/components/ui/OfflineIndicator';
 import { useToast } from '../hooks/useToast';
 import { Note } from '../models/Note';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -27,10 +29,11 @@ import {
   Sparkles,
   GripVertical,
   Droplet,
-  Shapes,
   LayoutGrid,
   List,
-  Download
+  Download,
+  WifiOff,
+  Cloud
 } from 'lucide-react';
 import ExportButton from '../contexts/components/export/ExportButton';
 import AutoBackupIndicator from '../contexts/components/backup/AutoBackupIndicator';
@@ -57,18 +60,37 @@ const NotesPage: React.FC = () => {
   const initialLoadRef = useRef(false);
   const isMountedRef = useRef(true);
   
+  // ========== HOOKS DE NOTAS (ONLINE Y OFFLINE) ==========
   const {
-    notes,
-    isLoading,
-    error,
-    loadNotes,
-    toggleFavorite,
-    toggleArchive,
-    deleteNote,
-    searchNotes,
-    getNotesByTag,
-    syncNotes,
+    notes: onlineNotes,
+    isLoading: isLoadingOnline,
+    error: onlineError,
+    loadNotes: loadOnlineNotes,
+    toggleFavorite: toggleFavoriteOnline,
+    toggleArchive: toggleArchiveOnline,
+    deleteNote: deleteNoteOnline,
+    searchNotes: searchNotesOnline,
+    getNotesByTag: getNotesByTagOnline,
+    syncNotes: syncNotesOnline,
   } = useNotes();
+
+  const {
+    notes: offlineNotes,
+    isLoading: isLoadingOffline,
+    isOnline,
+    wasOffline,
+    pendingCount: offlinePendingCount,
+    createNote: createOfflineNote,
+    updateNote: updateOfflineNote,
+    deleteNote: deleteOfflineNote,
+    forceSync: forceOfflineSync,
+    clearAllOfflineData,
+  } = useOfflineNotes();
+
+  // Usar notas online si hay conexión, sino usar offline
+  const notes = isOnline ? onlineNotes : offlineNotes;
+  const isLoading = isOnline ? isLoadingOnline : isLoadingOffline;
+  const error = isOnline ? onlineError : null;
 
   // ✅ Estado del auto-backup para saber si hay cambios pendientes
   const { pendingChanges } = useAutoBackup({ enabled: true });
@@ -118,12 +140,12 @@ const NotesPage: React.FC = () => {
 
   // Cargar notas SOLO UNA VEZ al montar
   useEffect(() => {
-    if (!initialLoadRef.current) {
+    if (!initialLoadRef.current && isOnline) {
       console.log('📝 NotesPage montado, cargando notas por primera vez...');
       initialLoadRef.current = true;
-      loadNotes();
+      loadOnlineNotes();
     }
-  }, []);
+  }, [isOnline, loadOnlineNotes]);
 
   // Filtrar notas activas (no archivadas, no eliminadas)
   useEffect(() => {
@@ -252,14 +274,19 @@ const NotesPage: React.FC = () => {
     info('🧹 Filtros eliminados');
   }, [info]);
 
-  // Función para eliminar múltiples notas
+  // Función para eliminar múltiples notas (con soporte offline)
   const deleteMultipleNotes = useCallback(async (ids: string[]): Promise<{ success: number; failed: number }> => {
     let success = 0;
     let failed = 0;
     
     for (const id of ids) {
       try {
-        const result = await deleteNote(id);
+        let result;
+        if (isOnline) {
+          result = await deleteNoteOnline(id);
+        } else {
+          result = await deleteOfflineNote(id);
+        }
         if (result) success++; else failed++;
       } catch {
         failed++;
@@ -267,7 +294,7 @@ const NotesPage: React.FC = () => {
     }
     
     return { success, failed };
-  }, [deleteNote]);
+  }, [isOnline, deleteNoteOnline, deleteOfflineNote]);
 
   // Función para importar notas
   const importNotes = useCallback(async (file: File): Promise<void> => {
@@ -285,17 +312,29 @@ const NotesPage: React.FC = () => {
     let filtered = activeNotes;
 
     // Filtro por categoría/etiqueta
-    if (selectedCategory !== 'Todas') {
-      filtered = getNotesByTag(selectedCategory).filter((note: Note) => 
+    if (selectedCategory !== 'Todas' && isOnline) {
+      filtered = getNotesByTagOnline(selectedCategory).filter((note: Note) => 
         !note.is_archived && !note.deleted_at
       );
+    } else if (selectedCategory !== 'Todas') {
+      // Offline: filtrar manualmente por tags
+      filtered = filtered.filter(note => note.tags?.includes(selectedCategory));
     }
 
     // Filtro por búsqueda
     if (searchQuery.trim()) {
-      filtered = searchNotes(searchQuery).filter((note: Note) => 
-        !note.is_archived && !note.deleted_at
-      );
+      if (isOnline) {
+        filtered = searchNotesOnline(searchQuery).filter((note: Note) => 
+          !note.is_archived && !note.deleted_at
+        );
+      } else {
+        // Offline: búsqueda manual
+        const query = searchQuery.toLowerCase();
+        filtered = filtered.filter(note => 
+          note.title.toLowerCase().includes(query) || 
+          note.content.toLowerCase().includes(query)
+        );
+      }
     }
 
     // ========== NUEVOS FILTROS ==========
@@ -305,12 +344,24 @@ const NotesPage: React.FC = () => {
     // ====================================
 
     return sortNotes(filtered, currentSortOption);
-  }, [activeNotes, selectedCategory, searchQuery, getNotesByTag, searchNotes, sortNotes, currentSortOption, filterByIcon, filterBySize, filterByIntensity]);
+  }, [activeNotes, selectedCategory, searchQuery, isOnline, getNotesByTagOnline, searchNotesOnline, filterByIcon, filterBySize, filterByIntensity, sortNotes, currentSortOption]);
 
   const displayNotes = getFilteredAndSortedNotes();
 
-  const handleCreateNote = () => {
-    navigate('/notes/new');
+  const handleCreateNote = async () => {
+    if (isOnline) {
+      navigate('/notes/new');
+    } else {
+      // Modo offline: crear nota localmente
+      const newNote = await createOfflineNote({
+        title: 'Nueva nota',
+        content: '',
+      });
+      if (newNote) {
+        success('📝 Nota creada localmente (se sincronizará cuando haya conexión)');
+        navigate(`/notes/${newNote.id}`);
+      }
+    }
     setIsFabMenuOpen(false);
   };
 
@@ -328,7 +379,13 @@ const NotesPage: React.FC = () => {
 
   const handleDeleteNote = async (id: string) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar esta nota?')) {
-      const successResult = await deleteNote(id);
+      let successResult;
+      if (isOnline) {
+        successResult = await deleteNoteOnline(id);
+      } else {
+        successResult = await deleteOfflineNote(id);
+      }
+      
       if (successResult && isMountedRef.current) {
         success('✅ Nota eliminada correctamente');
         if (isSelectionMode) {
@@ -345,7 +402,7 @@ const NotesPage: React.FC = () => {
   };
 
   const handleToggleArchive = async (id: string) => {
-    const successResult = await toggleArchive(id);
+    const successResult = await toggleArchiveOnline(id);
     if (successResult && isMountedRef.current) {
       const note = activeNotes.find(n => n.id === id);
       success(note?.is_archived ? '📦 Nota archivada' : '📦 Nota restaurada');
@@ -390,7 +447,7 @@ const NotesPage: React.FC = () => {
   };
 
   const handleToggleFavorite = async (id: string) => {
-    const successResult = await toggleFavorite(id);
+    const successResult = await toggleFavoriteOnline(id);
     if (successResult) {
       const note = activeNotes.find(n => n.id === id);
       success(note?.is_favorite ? '⭐ Nota añadida a favoritos' : '⭐ Nota eliminada de favoritos');
@@ -402,11 +459,16 @@ const NotesPage: React.FC = () => {
     setShowRightMenu(false);
     setIsFabMenuOpen(false);
     
-    await syncNotes();
+    if (isOnline) {
+      await syncNotesOnline();
+      success('🔄 Notas sincronizadas correctamente');
+    } else {
+      await forceOfflineSync();
+      success('🔄 Sincronización completada (pendientes subidos a la nube)');
+    }
     
     if (isMountedRef.current) {
       setIsSyncing(false);
-      success('🔄 Notas sincronizadas correctamente');
     }
   };
 
@@ -515,13 +577,13 @@ const NotesPage: React.FC = () => {
     );
   }
 
-  if (error && activeNotes.length === 0) {
+  if (error && activeNotes.length === 0 && isOnline) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
         <div className="text-center p-8 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-2xl border border-white/30">
           <p className="text-red-500 mb-4">{error}</p>
           <button
-            onClick={loadNotes}
+            onClick={loadOnlineNotes}
             className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl hover:shadow-lg transition-all"
           >
             Reintentar
@@ -533,6 +595,9 @@ const NotesPage: React.FC = () => {
 
   return (
     <div className={`min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800`}>
+      {/* ✅ INDICADOR DE MODO OFFLINE */}
+      <OfflineIndicator />
+      
       {/* Input oculto para importar archivos */}
       <input
         type="file"
@@ -565,9 +630,9 @@ const NotesPage: React.FC = () => {
 
       {/* Estado de conexión */}
       <ConnectionStatus
-        isOnline={true}
+        isOnline={isOnline}
         onRefresh={handleSync}
-        pendingSync={0}
+        pendingSync={offlinePendingCount}
       />
 
       {/* Header */}
@@ -818,7 +883,7 @@ const NotesPage: React.FC = () => {
             >
               <EmptyState
                 type="notes"
-                actionLabel="Crear primera nota"
+                actionLabel={isOnline ? "Crear primera nota" : "Crear nota offline"}
                 onAction={handleCreateNote}
               />
               {activeFiltersCount > 0 && (
@@ -839,10 +904,16 @@ const NotesPage: React.FC = () => {
                 <div className="text-sm text-gray-500 dark:text-gray-400">
                   Mostrando {displayNotes.length} nota{displayNotes.length !== 1 ? 's' : ''}
                   {activeFiltersCount > 0 && ' (filtradas)'}
+                  {!isOnline && (
+                    <span className="ml-2 inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                      <WifiOff size={12} />
+                      Modo offline
+                    </span>
+                  )}
                 </div>
                 
                 {/* ✅ Widget de Auto-Backup - Solo aparece cuando hay cambios pendientes */}
-                {pendingChanges && (
+                {pendingChanges && isOnline && (
                   <div className="flex-shrink-0">
                     <AutoBackupIndicator position="inline" />
                   </div>
@@ -918,7 +989,7 @@ const NotesPage: React.FC = () => {
                     <Plus className="w-4 h-4" />
                   </div>
                   <span className="flex-1 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Crear nota
+                    {isOnline ? 'Crear nota' : 'Crear nota offline'}
                   </span>
                 </motion.button>
 
