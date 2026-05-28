@@ -5,6 +5,9 @@ import { useTheme } from '../hooks/useTheme';
 import { useAuth } from '../hooks/useAuth';
 import { motion, AnimatePresence } from 'framer-motion';
 
+// Tipos correctos para Framer Motion
+import type { Easing } from 'framer-motion';
+
 const SplashScreen: React.FC = () => {
   const navigate = useNavigate();
   const { isDarkMode } = useTheme();
@@ -12,24 +15,30 @@ const SplashScreen: React.FC = () => {
   const [progress, setProgress] = useState(0);
   const [fadeOut, setFadeOut] = useState(false);
   const [currentTip, setCurrentTip] = useState(0);
+  const [showContent, setShowContent] = useState(false);
 
-  // Tips motivacionales
+  // Tips motivacionales (inspirados en la versión móvil)
   const tips = [
-    "📝 Tus ideas, organizadas",
+    "📝 Organiza tus ideas",
     "🔒 Seguridad de primer nivel",
     "🚀 Rápido y eficiente",
     "🎨 Diseño moderno",
     "💡 Creatividad sin límites",
-    "🌟 Cada nota es única"
+    "🌟 Cada nota es única",
+    "☁️ Sincronización en la nube",
+    "🔐 Autenticación biométrica"
   ];
 
   useEffect(() => {
-    // Rotar tips cada 800ms
+    // Mostrar contenido después de la animación inicial
+    const showTimer = setTimeout(() => setShowContent(true), 300);
+
+    // Rotar tips cada 3 segundos (como en móvil)
     const tipInterval = setInterval(() => {
       setCurrentTip(prev => (prev + 1) % tips.length);
-    }, 800);
+    }, 3000);
 
-    // Animación de progreso
+    // Animación de progreso (3 segundos como en móvil)
     const interval = setInterval(() => {
       setProgress(prev => {
         if (prev >= 100) {
@@ -38,9 +47,9 @@ const SplashScreen: React.FC = () => {
         }
         return prev + 1;
       });
-    }, 20);
+    }, 30);
 
-    // Navegar después de 2.5 segundos
+    // Navegar después de 3 segundos (como en móvil)
     const timer = setTimeout(() => {
       if (!isLoading) {
         setFadeOut(true);
@@ -48,12 +57,13 @@ const SplashScreen: React.FC = () => {
           navigate(user ? '/notes' : '/login');
         }, 500);
       }
-    }, 2500);
+    }, 3000);
 
     return () => {
       clearInterval(interval);
       clearTimeout(timer);
       clearInterval(tipInterval);
+      clearTimeout(showTimer);
     };
   }, [navigate, user, isLoading, tips.length]);
 
@@ -62,7 +72,7 @@ const SplashScreen: React.FC = () => {
     hidden: { opacity: 0 },
     visible: { 
       opacity: 1, 
-      transition: { duration: 0.8, staggerChildren: 0.2 }
+      transition: { duration: 0.8, staggerChildren: 0.15 }
     }
   };
 
@@ -71,22 +81,42 @@ const SplashScreen: React.FC = () => {
     visible: { 
       y: 0, 
       opacity: 1, 
-      transition: { duration: 0.5 }
+      transition: { duration: 0.5, ease: "easeOut" as Easing }
     }
   };
 
-  // ✅ Corregido: ease usa valores válidos de Framer Motion
-  const pulseVariants = {
-    initial: { scale: 1, opacity: 0.6 },
-    animate: {
-      scale: [1, 1.05, 1],
-      opacity: [0.6, 0.3, 0.6],
+  const logoVariants = {
+    hidden: { scale: 0.5, opacity: 0, rotate: -10 },
+    visible: { 
+      scale: 1, 
+      opacity: 1, 
+      rotate: 0,
       transition: { 
-        duration: 3, 
-        repeat: Infinity, 
-        ease: "easeInOut" as const
+        type: "spring" as const,
+        stiffness: 200, 
+        damping: 15,
+        duration: 0.8 
       }
     }
+  };
+
+  const pulseVariants = {
+    initial: { scale: 0.8, opacity: 0.2 },
+    animate: {
+      scale: [0.8, 1.1, 0.8],
+      opacity: [0.2, 0.4, 0.2],
+      transition: { 
+        duration: 4, 
+        repeat: Infinity, 
+        ease: "easeInOut" as Easing
+      }
+    }
+  };
+
+  const tipVariants = {
+    enter: { opacity: 0, y: 20 },
+    center: { opacity: 1, y: 0 },
+    exit: { opacity: 0, y: -20 }
   };
 
   return (
@@ -99,86 +129,118 @@ const SplashScreen: React.FC = () => {
           transition={{ duration: 0.5 }}
           className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden"
         >
-          {/* Fondo con gradiente moderno */}
+          {/* Fondo con gradiente inspirado en la versión móvil */}
           <div
             className="absolute inset-0"
             style={{
               background: isDarkMode
-                ? 'radial-gradient(ellipse at 50% 50%, #1e1b4b, #0f172a, #020617)'
-                : 'radial-gradient(ellipse at 50% 50%, #6366f1, #8b5cf6, #ec4899)',
+                ? 'linear-gradient(135deg, #1E3A8A 0%, #4C1D95 50%, #831843 100%)'
+                : 'linear-gradient(135deg, #2563EB 0%, #7C3AED 50%, #EC4899 100%)',
             }}
           />
 
-          {/* Partículas de fondo animadas */}
+          {/* Círculos decorativos de fondo inspirados en móvil */}
           <div className="absolute inset-0 overflow-hidden">
-            {[...Array(20)].map((_, i) => (
-              <motion.div
-                key={i}
-                className="absolute rounded-full bg-white/10"
-                style={{
-                  width: Math.random() * 100 + 50,
-                  height: Math.random() * 100 + 50,
-                  left: `${Math.random() * 100}%`,
-                  top: `${Math.random() * 100}%`,
-                }}
-                animate={{
-                  y: [0, -30, 0],
-                  x: [0, (Math.random() * 20) - 10, 0],
-                  scale: [1, 1.1, 1],
-                }}
-                transition={{
-                  duration: Math.random() * 5 + 3,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
-              />
-            ))}
+            {/* Círculo grande superior derecho */}
+            <motion.div
+              variants={pulseVariants}
+              initial="initial"
+              animate="animate"
+              className="absolute top-[-100px] right-[-100px] w-[250px] h-[250px] rounded-full"
+              style={{
+                background: 'radial-gradient(circle, rgba(37,99,235,0.3) 0%, rgba(37,99,235,0) 70%)',
+              }}
+            />
+            
+            {/* Círculo medio inferior izquierdo */}
+            <motion.div
+              variants={pulseVariants}
+              initial="initial"
+              animate="animate"
+              className="absolute bottom-[-50px] left-[-50px] w-[200px] h-[200px] rounded-full"
+              style={{
+                background: 'radial-gradient(circle, rgba(236,72,153,0.25) 0%, rgba(236,72,153,0) 70%)',
+              }}
+            />
+            
+            {/* Círculo pequeño medio izquierdo */}
+            <motion.div
+              variants={pulseVariants}
+              initial="initial"
+              animate="animate"
+              className="absolute top-[40%] left-[-40px] w-[120px] h-[120px] rounded-full"
+              style={{
+                background: 'radial-gradient(circle, rgba(124,58,237,0.3) 0%, rgba(124,58,237,0) 70%)',
+              }}
+            />
+            
+            {/* Círculo pequeño inferior derecho */}
+            <motion.div
+              variants={pulseVariants}
+              initial="initial"
+              animate="animate"
+              className="absolute bottom-[20%] right-[-30px] w-[100px] h-[100px] rounded-full"
+              style={{
+                background: 'radial-gradient(circle, rgba(6,182,212,0.25) 0%, rgba(6,182,212,0) 70%)',
+              }}
+            />
           </div>
-
-          {/* Círculos decorativos pulsantes - corregido */}
-          <motion.div
-            variants={pulseVariants}
-            initial="initial"
-            animate="animate"
-            className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 blur-3xl"
-          />
-          <motion.div
-            variants={pulseVariants}
-            initial="initial"
-            animate="animate"
-            className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-gradient-to-r from-blue-500/20 to-indigo-500/20 blur-3xl"
-          />
-          <motion.div
-            variants={pulseVariants}
-            initial="initial"
-            animate="animate"
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-gradient-to-r from-violet-500/10 to-fuchsia-500/10 blur-3xl"
-          />
 
           {/* Contenido principal */}
           <motion.div
             variants={containerVariants}
             initial="hidden"
-            animate="visible"
-            className="relative z-10 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-between min-h-screen py-8 sm:py-12"
+            animate={showContent ? "visible" : "hidden"}
+            className="relative z-10 w-full max-w-6xl mx-auto px-4 flex flex-col items-center justify-between min-h-screen py-12"
           >
-            {/* Espacio superior */}
-            <div className="flex-1 min-h-[10vh]" />
+            {/* Versión badge (superior derecha) */}
+            <motion.div 
+              variants={itemVariants}
+              className="absolute top-4 right-4"
+            >
+              <div className="px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-sm border border-white/20">
+                <span className="text-white text-xs font-semibold tracking-wider">
+                  v2.6.0
+                </span>
+              </div>
+            </motion.div>
 
-            {/* Logo y nombre */}
-            <motion.div variants={itemVariants} className="flex flex-col items-center">
-              {/* Logo animado */}
+            {/* Espacio superior */}
+            <div className="flex-1" />
+
+            {/* Logo y nombre - Estilo idéntico a móvil */}
+            <motion.div 
+              variants={logoVariants}
+              className="flex flex-col items-center"
+            >
+              {/* Logo con diseño de tarjeta inspirado en móvil */}
               <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                className="relative mb-6"
+                animate={{ 
+                  y: [0, -8, 0],
+                }}
+                transition={{ 
+                  duration: 2, 
+                  repeat: Infinity,
+                  ease: "easeInOut" as Easing
+                }}
+                className="relative mb-8"
               >
-                <div className="absolute inset-0 rounded-full blur-2xl bg-gradient-to-r from-purple-500 to-pink-500 animate-pulse" />
-                <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500 shadow-2xl flex items-center justify-center">
-                  <motion.svg
-                    animate={{ scale: [1, 1.1, 1] }}
-                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                    className="w-12 h-12 sm:w-14 sm:h-14 text-white"
+                <div 
+                  className="absolute inset-0 rounded-2xl blur-2xl"
+                  style={{
+                    background: 'linear-gradient(135deg, #F59E0B, #EF4444)',
+                    opacity: 0.4
+                  }}
+                />
+                <div 
+                  className="relative w-32 h-32 rounded-2xl flex items-center justify-center shadow-2xl"
+                  style={{
+                    background: 'linear-gradient(135deg, #F59E0B, #EF4444)',
+                    boxShadow: '0 20px 40px rgba(245, 158, 11, 0.3)'
+                  }}
+                >
+                  <svg 
+                    className="w-16 h-16 text-white"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -195,45 +257,66 @@ const SplashScreen: React.FC = () => {
                       strokeWidth={1.5}
                       d="M9 12h.01M12 12h.01M15 12h.01M9 16h.01M12 16h.01M15 16h.01"
                     />
-                  </motion.svg>
+                  </svg>
                 </div>
               </motion.div>
 
-              {/* Título con efecto neón */}
+              {/* Título "Quick" */}
               <motion.h1
                 variants={itemVariants}
-                className="text-5xl sm:text-6xl lg:text-7xl font-bold bg-gradient-to-r from-white via-purple-200 to-pink-200 bg-clip-text text-transparent"
+                className="text-6xl font-bold tracking-tight"
                 style={{
-                  textShadow: '0 0 30px rgba(139, 92, 246, 0.5)',
-                  letterSpacing: '-0.02em'
+                  background: 'linear-gradient(135deg, #FFFFFF, #FCD34D)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
                 }}
               >
-                QuickNote
+                Quick
               </motion.h1>
 
-              {/* Subtítulo */}
-              <motion.p
+              {/* Título "Note" */}
+              <motion.h1
                 variants={itemVariants}
-                className="mt-3 text-base sm:text-lg text-white/70 font-light tracking-wide"
+                className="text-6xl font-bold tracking-tight -mt-2"
+                style={{
+                  background: 'linear-gradient(135deg, #FCD34D, #FBBF24)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}
               >
-                Tus pensamientos, siempre contigo
-              </motion.p>
+                Note
+              </motion.h1>
             </motion.div>
 
-            {/* Tips rotativos */}
+            {/* Subtítulo con badge */}
             <motion.div
               variants={itemVariants}
-              className="mt-8 sm:mt-12"
+              className="mt-6"
             >
-              <div className="px-6 py-3 rounded-full bg-white/10 backdrop-blur-md border border-white/20 shadow-xl">
+              <div className="px-6 py-2 rounded-full bg-white/15 backdrop-blur-sm border border-white/25">
+                <p className="text-white text-sm font-medium tracking-wide">
+                  Tus pensamientos, siempre contigo
+                </p>
+              </div>
+            </motion.div>
+
+            {/* Tips rotativos (inspirado en móvil) */}
+            <motion.div
+              variants={itemVariants}
+              className="mt-12"
+            >
+              <div className="px-8 py-3.5 rounded-full bg-gradient-to-r from-white/20 to-white/10 backdrop-blur-md border border-white/25 shadow-xl">
                 <AnimatePresence mode="wait">
                   <motion.p
                     key={currentTip}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
+                    variants={tipVariants}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
                     transition={{ duration: 0.3 }}
-                    className="text-white text-sm sm:text-base font-medium"
+                    className="text-white text-base font-semibold"
                   >
                     {tips[currentTip]}
                   </motion.p>
@@ -241,64 +324,47 @@ const SplashScreen: React.FC = () => {
               </div>
             </motion.div>
 
-            {/* Versión badge */}
+            {/* Barra de progreso (inspirada en móvil) */}
             <motion.div
               variants={itemVariants}
-              className="mt-6"
+              className="absolute bottom-32 left-0 right-0 flex flex-col items-center"
             >
-              <div className="px-4 py-2 rounded-full bg-gradient-to-r from-purple-500/30 to-pink-500/30 backdrop-blur-md border border-white/30 shadow-lg">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                  <span className="text-white text-xs sm:text-sm font-semibold tracking-wider">
-                    VERSIÓN 2.6.0
-                  </span>
-                  <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Espacio central */}
-            <div className="flex-1 min-h-[5vh]" />
-
-            {/* Barra de progreso */}
-            <motion.div
-              variants={itemVariants}
-              className="w-full max-w-md px-4"
-            >
-              <div className="flex justify-between mb-2">
-                <span className="text-white/70 text-xs sm:text-sm font-light">Cargando...</span>
-                <span className="text-white/70 text-xs sm:text-sm font-mono">{progress}%</span>
-              </div>
-              <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
+              <div className="w-48 h-1.5 bg-white/20 rounded-full overflow-hidden">
                 <motion.div
-                  className="h-full bg-gradient-to-r from-purple-400 to-pink-400 rounded-full"
+                  className="h-full rounded-full"
+                  style={{
+                    background: 'linear-gradient(90deg, #F59E0B, #EC4899)',
+                  }}
                   initial={{ width: 0 }}
                   animate={{ width: `${progress}%` }}
                   transition={{ duration: 0.3 }}
                 />
               </div>
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+                className="mt-3 text-white/70 text-xs font-mono"
+              >
+                {progress}%
+              </motion.p>
             </motion.div>
 
-            {/* Footer */}
+            {/* Créditos (inspirados en móvil) */}
             <motion.div
               variants={itemVariants}
-              className="mt-8 sm:mt-12 pb-6"
+              className="absolute bottom-8 left-0 right-0 text-center"
             >
-              <div className="px-6 py-3 rounded-full bg-white/10 backdrop-blur-md border border-white/20 shadow-lg">
-                <div className="flex items-center gap-2 text-white/80 text-xs sm:text-sm">
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                  </svg>
-                  <span className="hidden xs:inline">Desarrollado con </span>
-                  <span className="text-red-300 inline">❤️</span>
-                  <span className="hidden xs:inline"> por José Pablo Miranda Quintanilla</span>
-                  <span className="xs:hidden">José Pablo M.Q.</span>
-                </div>
-              </div>
+              <p className="text-white/60 text-xs tracking-wide">
+                Desarrollado con <span className="text-red-300">❤️</span> por
+              </p>
+              <p className="text-white/80 text-sm font-semibold mt-1 tracking-wide">
+                José Pablo Miranda Quintanilla
+              </p>
             </motion.div>
 
             {/* Espacio inferior */}
-            <div className="flex-1 min-h-[5vh]" />
+            <div className="flex-1" />
           </motion.div>
         </motion.div>
       )}

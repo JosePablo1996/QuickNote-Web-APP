@@ -40,8 +40,17 @@ out/
 .env.production
 .env.staging
 .env.server
+
+# ✅ Archivos .txt de entorno (también ignorarlos)
 .env.development.txt
+.env.production.txt
 .envserver.txt
+Variables_De_Entorno_Fronted_QuickNote.txt
+Variables_De_Entorno_*.txt
+
+# ✅ CUALQUIER archivo .txt en el proyecto (para evitar subir documentación temporal)
+*.txt
+!README.md
 
 # El ejemplo sí se puede subir
 !.env.example
@@ -97,18 +106,14 @@ $RECYCLE.BIN/
 tsconfig.tsbuildinfo
 
 # ============================================
-# 📦 Package Managers - Lock files (subir solo uno)
+# 📦 Package Managers - Lock files (NO subir lock files)
 # ============================================
-# Descomenta el que uses:
-
-# npm
-# package-lock.json
-
-# yarn
-# yarn.lock
-
-# pnpm
-# pnpm-lock.yaml
+# Bloquear TODOS los archivos de bloqueo por seguridad
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+bun.lockb
+bun.lock
 
 # ============================================
 # 🗄️ Database
@@ -157,9 +162,21 @@ junit.xml
 # 🚫 Archivos específicos que no deben subirse
 # ============================================
 nodemon.json
-Variables_De_Entorno_Fronted_QuickNote.txt
 
 # ============================================
-# ✅ ARCHIVO INDEX.HTML - NO IGNORAR
+# 🔒 Seguridad - Archivos sensibles
 # ============================================
-# !index.html
+*.key
+*.pem
+*.crt
+*.p12
+secrets.json
+.secrets
+
+# ============================================
+# ✅ ARCHIVOS IMPORTANTES - NO IGNORAR
+# ============================================
+!index.html
+!README.md
+!.env.example
+!.gitignore
