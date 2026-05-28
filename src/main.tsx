@@ -38,6 +38,7 @@ interface ExtendedNavigator extends Navigator {
 
 /**
  * Registrar Service Worker para PWA y modo offline
+ * ✅ CORREGIDO: Solo se registra en desarrollo, NO en producción
  */
 const registerServiceWorker = async (): Promise<void> => {
   // Verificar si el navegador soporta Service Workers
@@ -46,17 +47,20 @@ const registerServiceWorker = async (): Promise<void> => {
     return;
   }
 
-  // Solo registrar en producción o si hay solicitud explícita
-  const shouldRegister = import.meta.env.PROD || 
-                         localStorage.getItem('register_sw') === 'true';
+  // ✅ DETECTAR SI ESTAMOS EN PRODUCCIÓN
+  const isProduction = window.location.hostname !== 'localhost' && 
+                       window.location.hostname !== '127.0.0.1' &&
+                       !window.location.hostname.includes('192.168');
+  
+  // ✅ SOLO registrar en desarrollo (localhost) o si se fuerza manualmente
+  const shouldRegister = !isProduction || localStorage.getItem('register_sw') === 'true';
 
   if (!shouldRegister) {
-    console.log('🔧 Service Worker no registrado en desarrollo (usa localStorage.register_sw=true para forzar)');
+    console.log('🔧 Service Worker deshabilitado en producción');
     return;
   }
 
   try {
-    // Registrar Service Worker
     const registration = await navigator.serviceWorker.register('/sw.js', {
       scope: '/',
     }) as ServiceWorkerWithSync;
@@ -203,11 +207,13 @@ if (typeof window !== 'undefined') {
   window.addEventListener('load', () => {
     console.log('🚀 QuickNote - Inicializando funcionalidades offline');
     
-    // Registrar Service Worker
+    // Registrar Service Worker (solo en desarrollo)
     registerServiceWorker();
     
-    // Configurar background sync
-    setupBackgroundSync();
+    // Configurar background sync (solo si hay SW)
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      setupBackgroundSync();
+    }
     
     // Solicitar permisos de notificación (opcional)
     requestNotificationPermission();
@@ -269,7 +275,6 @@ if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
   // Manejar cuando el Service Worker toma control
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     console.log('🔄 Service Worker actualizado, recargando página...');
-    // Recargar la página para usar la nueva versión
     window.location.reload();
   });
 }
